@@ -10,21 +10,18 @@
             margin: 0; color: white; 
             font-family: -apple-system, sans-serif;
             height: 100dvh; display: flex; flex-direction: column;
-            /* 預設背景，若相簿沒設圖會顯示這個 */
             background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
             background-size: cover;
             background-position: center;
             transition: background-image 0.5s ease-in-out;
         }
 
-        /* 頂部狀態列 */
         #status-bar {
             padding: 10px 20px; display: flex; justify-content: space-between;
             font-size: 14px; font-weight: bold;
             background: rgba(0,0,0,0.1);
         }
 
-        /* 桌面 Icon 區域 */
         #home-screen {
             flex: 1; display: grid; 
             grid-template-columns: repeat(4, 1fr); 
@@ -42,7 +39,6 @@
         }
         .icon-box:active { transform: scale(0.9); }
 
-        /* Dock 欄（底部常用 APP） */
         #dock {
             background: rgba(255,255,255,0.25); backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
@@ -70,10 +66,10 @@
         <span style="font-size: 12px;">時鐘</span>
     </a>
 
-    <div class="app-icon">
+    <a href="weather.html" class="app-icon">
         <div class="icon-box" style="background: #00bcd4;">☁️</div>
         <span style="font-size: 12px;">氣象</span>
-    </div>
+    </a>
 
     <a href="gallery.html" class="app-icon">
         <div class="icon-box" style="background: #e91e63;">🖼️</div>
@@ -82,14 +78,14 @@
 </div>
 
 <div id="dock">
-    <a href="chat.html" class="dock-item">💬</a>
-    <a href="gallery.html" class="dock-item">🖼️</a>
-    <a href="clock.html" class="dock-item">⏰</a>
+    <a href="chat.html" class="dock-item" title="AI助手">💬</a>
+    <a href="gallery.html" class="dock-item" title="相簿">🖼️</a>
+    <a href="weather.html" class="dock-item" title="氣象">☁️</a>
+    <a href="clock.html" class="dock-item" title="時鐘">⏰</a>
     <div onclick="location.reload()" class="dock-item">🏠</div>
 </div>
 
 <script>
-    // 1. 更新時間
     function updateTime() {
         const now = new Date();
         document.getElementById('live-time').innerText = 
@@ -97,7 +93,6 @@
             now.getMinutes().toString().padStart(2, '0');
     }
 
-    // 2. 讀取相簿設定的桌布
     function loadWallpaper() {
         const savedWallpaper = localStorage.getItem('active_wallpaper');
         if(savedWallpaper) {
@@ -105,50 +100,43 @@
         }
     }
 
-    // 初始化
+    function checkAlarmsOnHome() {
+        const alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
+        const now = new Date();
+        const currentHM = now.getHours().toString().padStart(2, '0') + ":" + 
+                          now.getMinutes().toString().padStart(2, '0');
+
+        let changed = false;
+        alarms.forEach(alarm => {
+            if (alarm.active && alarm.time === currentHM) {
+                alarm.active = false;
+                changed = true;
+                setTimeout(() => {
+                    alert(`⏰ 鬧鐘提醒：現在是 ${currentHM} 喵！`);
+                }, 100);
+            }
+        });
+
+        if (changed) {
+            localStorage.setItem('my_alarms', JSON.stringify(alarms));
+        }
+    }
+
+    // 合併後的初始化邏輯
     window.onload = function() {
         updateTime();
         loadWallpaper();
+        checkAlarmsOnHome(); // 啟動即檢查一次
+        
         setInterval(updateTime, 1000);
+        setInterval(checkAlarmsOnHome, 1000);
     };
 
-    // 監聽來自其他頁面的數據變動（當你在相簿換圖，桌面也會即時知道）
     window.addEventListener('storage', (e) => {
         if (e.key === 'active_wallpaper') {
             loadWallpaper();
         }
     });
-
-    // index.html 增加的鬧鐘監聽邏輯
-function checkAlarmsOnHome() {
-    const alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
-    const now = new Date();
-    const currentHM = now.getHours().toString().padStart(2, '0') + ":" + 
-                      now.getMinutes().toString().padStart(2, '0');
-
-    let changed = false;
-    alarms.forEach(alarm => {
-        if (alarm.active && alarm.time === currentHM) {
-            alarm.active = false; // 響過後關閉
-            changed = true;
-            setTimeout(() => {
-                alert(`⏰ 鬧鐘提醒：現在是 ${currentHM} 喵！`);
-            }, 100);
-        }
-    });
-
-    if (changed) {
-        localStorage.setItem('my_alarms', JSON.stringify(alarms));
-    }
-}
-
-// 在原本的 window.onload 裡加入執行
-window.onload = function() {
-    updateTime();
-    loadWallpaper();
-    setInterval(updateTime, 1000);
-    setInterval(checkAlarmsOnHome, 1000); // 每秒檢查一次鬧鐘
-};
 </script>
 </body>
 </html>

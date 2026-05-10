@@ -5,14 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>時鐘 APP</title>
     <style>
-        body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; text-align: center; }
-        .app-bar { padding: 20px; display: flex; align-items: center; justify-content: space-between; }
-        #big-clock { font-size: 80px; font-weight: bold; margin-top: 50px; color: #ff9800; }
-        #date-info { font-size: 20px; color: #888; }
-        .alarm-list { flex: 1; padding: 20px; text-align: left; }
-        .alarm-item { background: #1c1c1e; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .add-btn { background: #ff9800; color: white; border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; margin: 20px; }
-        a { text-decoration: none; color: #ff9800; }
+        :root { --primary: #ff9800; --bg: #000; }
+        body { margin: 0; background: var(--bg); color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; text-align: center; }
+        .app-bar { padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #333; }
+        a { text-decoration: none; color: var(--primary); font-size: 16px; }
+        
+        #big-clock { font-size: 70px; font-weight: bold; margin-top: 40px; color: var(--primary); font-variant-numeric: tabular-nums; }
+        #date-info { font-size: 18px; color: #888; margin-bottom: 20px; }
+
+        .alarm-list { flex: 1; padding: 20px; text-align: left; overflow-y: auto; }
+        .alarm-item { 
+            background: #1c1c1e; padding: 15px; border-radius: 12px; margin-bottom: 10px; 
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .alarm-time { font-size: 28px; font-weight: 500; }
+        .delete-btn { background: #ff3b30; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+        
+        .add-area { padding: 20px; border-top: 1px solid #333; background: #000; }
+        .add-btn { background: var(--primary); color: white; border: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        
+        /* 已響過的灰掉樣式 */
+        .expired { opacity: 0.5; }
     </style>
 </head>
 <body>
@@ -24,45 +37,102 @@
 </div>
 
 <div id="big-clock">00:00:00</div>
-<div id="date-info">2026年5月10日 星期日</div>
+<div id="date-info">正在讀取日期...</div>
 
 <div class="alarm-list">
-    <h3>鬧鐘</h3>
-    <div id="list-container">
-        </div>
+    <h3 style="color: #888; font-size: 12px; letter-spacing: 1px;">鬧鐘清單</h3>
+    <div id="list-container"></div>
 </div>
 
-<button class="add-btn" onclick="addAlarm()">+ 新增鬧鐘</button>
+<div class="add-area">
+    <button class="add-btn" onclick="addAlarm()">+ 新增鬧鐘</button>
+</div>
 
 <script>
+    let alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
+
     function updateClock() {
         const now = new Date();
-        document.getElementById('big-clock').innerText = now.toLocaleTimeString('zh-TW', {hour12:false});
-        // 這裡可以同步檢查鬧鐘是否響起
-    }
-    setInterval(updateClock, 1000);
+        const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
+        document.getElementById('big-clock').innerText = timeStr;
+        
+        // 更新日期
+        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+        document.getElementById('date-info').innerText = now.toLocaleDateString('zh-TW', options);
 
-    function addAlarm() {
-        const time = prompt("請輸入鬧鐘時間 (例如 08:00):");
-        if(time) {
-            let alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
-            alarms.push({ time: time, active: true });
-            localStorage.setItem('my_alarms', JSON.stringify(alarms));
+        // 核心檢查：每一秒比對一次 HH:MM
+        const currentHM = timeStr.substring(0, 5); 
+        checkAlarms(currentHM);
+    }
+
+    function checkAlarms(currentTime) {
+        let changed = false;
+        alarms.forEach((alarm) => {
+            // 如果鬧鐘是開啟狀態且時間到了
+            if (alarm.active && alarm.time === currentTime) {
+                alarm.active = false; // 響過後關閉，避免重複跳窗
+                changed = true;
+                
+                // 使用瀏覽器內建通知視窗
+                setTimeout(() => {
+                    alert(`⏰ 鬧鐘提醒：現在是 ${currentTime} 喵！`);
+                }, 100);
+            }
+        });
+
+        if (changed) {
+            saveAlarms();
             renderAlarms();
         }
     }
 
+    function addAlarm() {
+        const time = prompt("設定鬧鐘時間 (例如 08:30):");
+        if (time && time.includes(":")) {
+            // 補齊格式，例如 8:5 改成 08:05
+            const parts = time.split(':');
+            const h = parts[0].padStart(2, '0');
+            const m = parts[1].padStart(2, '0');
+            alarms.push({ time: `${h}:${m}`, active: true });
+            saveAlarms();
+            renderAlarms();
+        }
+    }
+
+    function deleteAlarm(index) {
+        alarms.splice(index, 1);
+        saveAlarms();
+        renderAlarms();
+    }
+
+    function saveAlarms() {
+        localStorage.setItem('my_alarms', JSON.stringify(alarms));
+    }
+
     function renderAlarms() {
         const container = document.getElementById('list-container');
-        let alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
-        container.innerHTML = alarms.map(a => `
-            <div class="alarm-item">
-                <span style="font-size:24px">${a.time}</span>
-                <span>${a.active ? '🔔 已開啟' : '🔕 已關閉'}</span>
+        if (alarms.length === 0) {
+            container.innerHTML = `<p style="color:#444; text-align:center; font-size:14px;">尚無設定鬧鐘</p>`;
+            return;
+        }
+        
+        // 按時間排序
+        alarms.sort((a, b) => a.time.localeCompare(b.time));
+
+        container.innerHTML = alarms.map((a, i) => `
+            <div class="alarm-item ${a.active ? '' : 'expired'}">
+                <div class="alarm-time">${a.time}</div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:12px; color:${a.active ? '#4cd964' : '#666'}">
+                        ${a.active ? '🔔 啟動中' : '⚪ 已響過'}
+                    </span>
+                    <button class="delete-btn" onclick="deleteAlarm(${i})">刪除</button>
+                </div>
             </div>
         `).join('');
     }
 
+    setInterval(updateClock, 1000);
     renderAlarms();
 </script>
 </body>

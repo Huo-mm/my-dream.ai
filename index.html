@@ -3,53 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI 偵錯工具</title>
+    <title>AI 助手最終修正版</title>
     <style>
-        body { margin: 0; background: #f0f2f5; font-family: sans-serif; padding: 20px; }
-        .box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .btn { background: #0084ff; color: white; border: none; padding: 10px 20px; border-radius: 5px; width: 100%; margin-top: 10px; }
-        #log { background: #333; color: #0f0; padding: 10px; border-radius: 5px; margin-top: 20px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; height: 200px; overflow-y: auto; }
+        body { margin: 0; background: #f0f2f5; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        .app-bar { background: #673ab7; color: white; padding: 16px; font-size: 18px; text-align: center; font-weight: bold; }
+        #chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; }
+        .bubble { padding: 10px 15px; border-radius: 18px; margin-bottom: 10px; max-width: 80%; line-height: 1.4; font-size: 15px; }
+        .user { align-self: flex-end; background-color: #673ab7; color: white; }
+        .ai { align-self: flex-start; background-color: white; color: black; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .input-bar { background: white; display: flex; padding: 10px; border-top: 1px solid #ddd; }
+        input { flex: 1; border: none; padding: 10px; background: #eee; border-radius: 20px; outline: none; }
+        button { background: none; border: none; color: #673ab7; font-weight: bold; margin-left: 10px; }
+        .setup { font-size: 11px; color: #888; text-align: center; padding: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <h3>最後偵錯測試</h3>
-    <button class="btn" onclick="setKey()">1. 設定/更新 API Key</button>
-    <input type="text" id="testMsg" style="width:100%; margin-top:10px; padding:8px; box-sizing:border-box" placeholder="隨便打個字...">
-    <button class="btn" style="background:#28a745" onclick="testConnection()">2. 開始測試連線</button>
+<div class="app-bar">AI 聊天室 (已修正路徑)</div>
+<div class="setup" onclick="setKey()">⚙️ 設定 API Key</div>
+<div id="chat-container"></div>
+
+<div class="input-bar">
+    <input type="text" id="userInput" placeholder="說點什麼..." onkeypress="if(event.key==='Enter')send()">
+    <button onclick="send()">傳送</button>
 </div>
 
-<div id="log">測試結果會顯示在這裡...</div>
-
 <script>
+    let myKey = localStorage.getItem('my_ai_key') || "";
+
     function setKey() {
         const k = prompt("請貼上 API Key:");
-        if(k) { localStorage.setItem('my_ai_key', k.trim()); alert("已儲存！"); }
+        if(k) { localStorage.setItem('my_ai_key', k.trim()); location.reload(); }
     }
 
-    async function testConnection() {
-        const log = document.getElementById('log');
+    async function send() {
         const key = localStorage.getItem('my_ai_key');
-        const text = document.getElementById('testMsg').value || "Hello";
+        if(!key) { alert("請先設定 Key"); return; }
         
-        if(!key) { log.innerText = "錯誤：你還沒設定 API Key！"; return; }
-        
-        log.innerText = "正在連線到 Google...\n";
+        const input = document.getElementById('userInput');
+        const text = input.value.trim();
+        if(!text) return;
 
-        try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
-            });
+        addBubble(text, 'user');
+        input.value = '';
 
-            const data = await res.json();
-            log.innerText += "--- 收到回報 ---\n" + JSON.stringify(data, null, 2);
-        } catch (e) {
-            log.innerText += "--- 網路層級錯誤 ---\n" + e.toString();
+        // *** 這裡是最關鍵的修正點 ***
+        // 我們測試目前 Google 最新的三種可能路徑
+        const testModels = [
+            "gemini-1.5-flash-latest", // 加上 -latest 是 2026 年最穩定的寫法
+            "gemini-2.0-flash",        // 預防你的帳號已經升級到 2.0
+            "gemini-pro"               // 萬用備案
+        ];
+
+        let success = false;
+        for (let m of testModels) {
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
+                });
+                const data = await res.json();
+                
+                if (data.candidates && data.candidates[0].content) {
+                    addBubble(data.candidates[0].content.parts[0].text, 'ai');
+                    success = true;
+                    break;
+                }
+            } catch (e) {}
         }
+
+        if(!success) {
+            addBubble("連線成功但找不到模型。請去 AI Studio 確認你的 API Key 是否有選中 Gemini 1.5 Flash。", 'ai');
+        }
+    }
+
+    function addBubble(t, type) {
+        const container = document.getElementById('chat-container');
+        const div = document.createElement('div');
+        div.className = `bubble ${type}`;
+        div.innerText = t;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
     }
 </script>
 

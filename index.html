@@ -6,21 +6,21 @@
     <title>我的私人 AI 助手</title>
     <style>
         body { margin: 0; background-color: #f5f5f5; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
-        .app-bar { background: #4285f4; color: white; padding: 16px; font-size: 20px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .app-bar { background: #4caf50; color: white; padding: 16px; font-size: 20px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         #chat-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; }
         .bubble { padding: 12px 16px; border-radius: 20px; margin-bottom: 12px; max-width: 85%; line-height: 1.5; font-size: 16px; word-wrap: break-word; }
-        .user { align-self: flex-end; background-color: #d2e3fc; color: #174ea6; border-bottom-right-radius: 4px; }
-        .ai { align-self: flex-start; background-color: white; color: #202124; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .user { align-self: flex-end; background-color: #e8f5e9; color: #2e7d32; border-bottom-right-radius: 4px; }
+        .ai { align-self: flex-start; background-color: white; color: #212121; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .input-bar { background: white; display: flex; padding: 8px 16px; align-items: center; border-top: 1px solid #ddd; }
         input { flex: 1; border: none; padding: 12px 16px; background: #f1f3f4; border-radius: 24px; outline: none; font-size: 16px; }
-        button { background: none; border: none; color: #1a73e8; font-weight: bold; padding: 10px; font-size: 16px; margin-left: 8px; }
-        .setup-btn { font-size: 12px; color: #5f6368; text-align: center; padding: 8px; background: #eeeeee; cursor: pointer; text-decoration: underline; }
+        button { background: none; border: none; color: #4caf50; font-weight: bold; padding: 10px; font-size: 16px; margin-left: 8px; cursor: pointer; }
+        .setup-btn { font-size: 12px; color: #5f6368; text-align: center; padding: 8px; background: #eeeeee; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="app-bar">AI 聊天室</div>
-<div class="setup-btn" onclick="setKey()">⚙️ 設定 API Key (修正版)</div>
+<div class="app-bar">AI 聊天助手 (穩定版)</div>
+<div class="setup-btn" onclick="setKey()">⚙️ 重新設定 API Key</div>
 <div id="chat-container"></div>
 
 <div class="input-bar">
@@ -30,16 +30,14 @@
 
 <script>
     let myKey = localStorage.getItem('my_ai_key') || "";
-    if(myKey) {
-        addBubble("連線已修正！請試試看打字聊天。", 'ai');
-    }
+    if(myKey) addBubble("系統就緒，請嘗試對話。", 'ai');
 
     function setKey() {
         const k = prompt("請貼上正確的 API Key:", myKey);
         if(k) { 
             myKey = k.trim(); 
             localStorage.setItem('my_ai_key', myKey); 
-            alert("設定成功！");
+            alert("設定成功！正在重新載入...");
             location.reload();
         }
     }
@@ -54,24 +52,29 @@
         input.value = '';
 
         try {
-            // 這裡使用了 v1 穩定版網址
-            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${myKey}`;
+            // 使用 v1beta 搭配最新的模型路徑
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${myKey}`;
+            
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: text }] }]
+                })
             });
             
             const data = await res.json();
             
             if (data.error) {
-                addBubble("Google 說錯誤：" + data.error.message, 'ai');
-            } else {
+                addBubble("錯誤訊息：" + data.error.message, 'ai');
+            } else if (data.candidates && data.candidates[0].content) {
                 const aiText = data.candidates[0].content.parts[0].text;
                 addBubble(aiText, 'ai');
+            } else {
+                addBubble("收到空回應，請檢查 API Key 是否有權限。", 'ai');
             }
         } catch (e) {
-            addBubble("網路異常，請確認手機連線。", 'ai');
+            addBubble("網路連線問題，請稍後再試。", 'ai');
         }
     }
 

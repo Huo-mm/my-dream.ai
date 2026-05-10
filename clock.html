@@ -77,7 +77,7 @@
                 alarm.active = false; 
                 hasChanges = true;
                 setTimeout(() => {
-                    alert(`⏰ 鬧鐘提醒：現在是 ${currentTime} 喵！`);
+                    alert(`⏰ 現在是 ${currentTime} ！`);
                 }, 100);
             }
         });
@@ -107,7 +107,7 @@
             h = userInput.padStart(2, '0');
             m = "00";
         } else {
-            alert("格式不對喵！請輸入數字（如 8 或 0830）。");
+            alert("格式有誤，請輸入數字（如 8 或 0830）。");
             return;
         }
 
@@ -120,7 +120,7 @@
             saveAlarms();
             renderAlarms();
         } else {
-            alert("時間不合法喵！小時要在 23 以內，分鐘要在 59 以內。");
+            alert("時間不符合，小時請在 23 以內，分鐘在 59 以內。");
         }
     }
 
@@ -151,7 +151,7 @@
                 <div class="alarm-time">${a.time}</div>
                 <div style="display:flex; align-items:center; gap:12px;">
                     <span style="font-size:11px; color:${a.active ? '#4cd964' : '#666'}">
-                        ${a.active ? '啟動中' : '已響過'}
+                        ${a.active ? '啟動中' : '已結束'}
                     </span>
                     <button class="delete-btn" onclick="deleteAlarm(${i})">刪除</button>
                 </div>

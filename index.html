@@ -20,7 +20,7 @@
 <body>
 
 <div class="app-bar">AI 聊天室</div>
-<div class="setup-btn" onclick="setKey()">⚙️ 點此重新設定 API Key</div>
+<div class="setup-btn" onclick="setKey()">⚙️ 設定 API Key (修正版)</div>
 <div id="chat-container"></div>
 
 <div class="input-bar">
@@ -29,19 +29,18 @@
 </div>
 
 <script>
-    // 檢查有沒有存過的鑰匙
     let myKey = localStorage.getItem('my_ai_key') || "";
     if(myKey) {
-        addBubble("歡迎回來！我準備好聊天了。", 'ai');
+        addBubble("連線已修正！請試試看打字聊天。", 'ai');
     }
 
     function setKey() {
-        const k = prompt("請貼上正確的 Google API Key (AIza...開頭):", myKey);
+        const k = prompt("請貼上正確的 API Key:", myKey);
         if(k) { 
             myKey = k.trim(); 
             localStorage.setItem('my_ai_key', myKey); 
             alert("設定成功！");
-            location.reload(); // 重新整理頁面確保生效
+            location.reload();
         }
     }
 
@@ -55,8 +54,8 @@
         input.value = '';
 
         try {
-            // 注意這裡的模型名稱和網址
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${myKey}`;
+            // 這裡使用了 v1 穩定版網址
+            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${myKey}`;
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -66,13 +65,13 @@
             const data = await res.json();
             
             if (data.error) {
-                addBubble("API 報錯了：" + data.error.message, 'ai');
+                addBubble("Google 說錯誤：" + data.error.message, 'ai');
             } else {
                 const aiText = data.candidates[0].content.parts[0].text;
                 addBubble(aiText, 'ai');
             }
         } catch (e) {
-            addBubble("連線失敗！請確認你的 API Key 是否正確且有開通。", 'ai');
+            addBubble("網路異常，請確認手機連線。", 'ai');
         }
     }
 

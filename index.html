@@ -118,6 +118,37 @@
             loadWallpaper();
         }
     });
+
+    // index.html 增加的鬧鐘監聽邏輯
+function checkAlarmsOnHome() {
+    const alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
+    const now = new Date();
+    const currentHM = now.getHours().toString().padStart(2, '0') + ":" + 
+                      now.getMinutes().toString().padStart(2, '0');
+
+    let changed = false;
+    alarms.forEach(alarm => {
+        if (alarm.active && alarm.time === currentHM) {
+            alarm.active = false; // 響過後關閉
+            changed = true;
+            setTimeout(() => {
+                alert(`⏰ 鬧鐘提醒：現在是 ${currentHM} 喵！`);
+            }, 100);
+        }
+    });
+
+    if (changed) {
+        localStorage.setItem('my_alarms', JSON.stringify(alarms));
+    }
+}
+
+// 在原本的 window.onload 裡加入執行
+window.onload = function() {
+    updateTime();
+    loadWallpaper();
+    setInterval(updateTime, 1000);
+    setInterval(checkAlarmsOnHome, 1000); // 每秒檢查一次鬧鐘
+};
 </script>
 </body>
 </html>

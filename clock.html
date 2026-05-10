@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時鐘 APP</title>
+    <style>
+        body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; text-align: center; }
+        .app-bar { padding: 20px; display: flex; align-items: center; justify-content: space-between; }
+        #big-clock { font-size: 80px; font-weight: bold; margin-top: 50px; color: #ff9800; }
+        #date-info { font-size: 20px; color: #888; }
+        .alarm-list { flex: 1; padding: 20px; text-align: left; }
+        .alarm-item { background: #1c1c1e; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .add-btn { background: #ff9800; color: white; border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; margin: 20px; }
+        a { text-decoration: none; color: #ff9800; }
+    </style>
+</head>
+<body>
+
+<div class="app-bar">
+    <a href="index.html">❮ 桌面</a>
+    <span style="font-weight:bold">時鐘</span>
+    <span style="width:40px"></span>
+</div>
+
+<div id="big-clock">00:00:00</div>
+<div id="date-info">2026年5月10日 星期日</div>
+
+<div class="alarm-list">
+    <h3>鬧鐘</h3>
+    <div id="list-container">
+        </div>
+</div>
+
+<button class="add-btn" onclick="addAlarm()">+ 新增鬧鐘</button>
+
+<script>
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('big-clock').innerText = now.toLocaleTimeString('zh-TW', {hour12:false});
+        // 這裡可以同步檢查鬧鐘是否響起
+    }
+    setInterval(updateClock, 1000);
+
+    function addAlarm() {
+        const time = prompt("請輸入鬧鐘時間 (例如 08:00):");
+        if(time) {
+            let alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
+            alarms.push({ time: time, active: true });
+            localStorage.setItem('my_alarms', JSON.stringify(alarms));
+            renderAlarms();
+        }
+    }
+
+    function renderAlarms() {
+        const container = document.getElementById('list-container');
+        let alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
+        container.innerHTML = alarms.map(a => `
+            <div class="alarm-item">
+                <span style="font-size:24px">${a.time}</span>
+                <span>${a.active ? '🔔 已開啟' : '🔕 已關閉'}</span>
+            </div>
+        `).join('');
+    }
+
+    renderAlarms();
+</script>
+</body>
+</html>

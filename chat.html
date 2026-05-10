@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI 助手 - 已連結</title>
+    <title>MINE</title>
     <style>
         :root { --primary: #4285f4; --bg: #f8f9fa; --chat-bg: #ffffff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -63,8 +63,8 @@
 <div id="sidebar">
     <h2 style="margin-top:0">系統設定</h2>
     <div class="set-group"><label>Google API Key</label><input type="text" id="apiKey" class="set-input"></div>
-    <div class="set-group"><label>顯示名稱</label><input type="text" id="charName" class="set-input"></div>
-    <div class="set-group"><label>角色人設 (Prompt)</label><textarea id="charPrompt" rows="8"></textarea></div>
+    <div class="set-group"><label>角色名稱</label><input type="text" id="charName" class="set-input"></div>
+    <div class="set-group"><label>角色設定 (Prompt)</label><textarea id="charPrompt" rows="8"></textarea></div>
     <button class="btn-action" style="background: #28a745; color:white;" onclick="saveSettings()">儲存設定</button>
     <button class="btn-action" style="background: #eee; color:#666;" onclick="clearHistory()">清除對話紀錄</button>
 </div>
@@ -74,7 +74,7 @@
 <div id="main">
     <div class="app-bar">
         <a href="index.html" class="back-btn">❮</a>
-        <div class="title" id="display-name">AI 助手</div>
+        <div class="title" id="display-name">AI</div>
         <div class="menu-btn" onclick="toggleSidebar()">⚙️</div>
     </div>
     
@@ -165,7 +165,7 @@
         
         // --- 2. 讀取分類後的備忘錄數據 ---
         const userPrefs = JSON.parse(localStorage.getItem('user_prefs') || "[]").join('、') || "無紀錄";
-        const userTodos = JSON.parse(localStorage.getItem('user_todos') || "[]").join('、') || "目前沒事做";
+        const userTodos = JSON.parse(localStorage.getItem('user_todos') || "[]").join('、') || "暫無行程安排";
         
         const now = new Date();
         
@@ -178,8 +178,10 @@
 4. 系統鬧鐘設定：${savedAlarms}
 
 【回覆準則】
-- 如果使用者提到的個人喜好不在「個人偏好」中，請默默記住並引導他去備忘錄修改。
-- 回話請保持溫暖與智慧，適時加入「喵」作為語助詞。
+- 請默默記住使用者備忘錄提到的「個人偏好」，並在相關話題中不經意提起。
+- 回話請謹記「角色設定」中的內容，保持固定的口吻與態度。
+- 回話請以口語化的形式進行，多以訊息聊天的方式推進日常互動
+- 多已問題結尾，延續話題
 `;
         
         try {
@@ -200,7 +202,7 @@
             if(chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
             localStorage.setItem('chat_history', JSON.stringify(chatHistory));
         } catch (e) { 
-            addBubble("連線異常，請檢查設定或 API Key 喵。", 'a'); 
+            addBubble("連線異常，請檢查設定或 API Key。", 'a'); 
         }
     }
 

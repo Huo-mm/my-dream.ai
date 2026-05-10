@@ -140,14 +140,26 @@
         input.value = '';
         const userMsg = { role: "user", parts: [{ text: text }] };
 
-        // --- 3. 讀取時鐘 App 鬧鐘數據並餵給 AI ---
+        // --- 1. 讀取時鐘數據 ---
         const savedAlarms = localStorage.getItem('my_alarms') || "目前沒有設定鬧鐘";
+        
+        // --- 2. 讀取備忘錄數據 (新增的部分) ---
+        const savedNotes = JSON.parse(localStorage.getItem('user_notes') || "[]");
+        const notesContext = savedNotes.length > 0 ? savedNotes.join('、') : "目前沒有備忘錄紀錄";
+        
         const now = new Date();
+        
+        // 組合完整的背景資訊
         const systemContext = `
-【現在環境資訊】
-時間：${now.toLocaleString()}
-使用者設定的鬧鐘清單：${savedAlarms}
-請根據上述資訊回答。如果使用者問時間或鬧鐘，請以此為準。
+【當前系統環境資訊】
+1. 現在時間：${now.toLocaleString()}
+2. 鬧鐘清單：${savedAlarms}
+3. 使用者備忘錄與個人偏好：${notesContext}
+
+請根據以上資訊與使用者對話。
+- 如果使用者問起他的喜好、討厭的東西或待辦事項，請參考「備忘錄」。
+- 如果使用者問時間或鬧鐘，請參考「鬧鐘清單」。
+- 請保持親切，像是一個了解使用者的好夥伴喵！
 `;
         
         try {
@@ -155,8 +167,10 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    // 將人設 + 時鐘資訊傳給 AI
-                    system_instruction: { parts: [{ text: (localStorage.getItem('char_prompt') || "") + systemContext }] },
+                    // 將人設 (char_prompt) + 系統背景資訊 (systemContext) 傳給 AI
+                    system_instruction: { 
+                        parts: [{ text: (localStorage.getItem('char_prompt') || "") + systemContext }] 
+                    },
                     contents: [...chatHistory, userMsg]
                 })
             });
@@ -166,9 +180,11 @@
             chatHistory.push(userMsg, { role: "model", parts: [{ text: aiText }] });
             if(chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
             localStorage.setItem('chat_history', JSON.stringify(chatHistory));
-        } catch (e) { addBubble("連線異常，請檢查設定。", 'a'); }
+        } catch (e) { 
+            addBubble("連線異常，請檢查設定或 API Key 是否正確喵。", 'a'); 
+        }
     }
-
+    
     function addBubble(t, type, scroll = true) {
         const box = document.getElementById('chat-box');
         const div = document.createElement('div');

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>My Personal OS</title>
+    <style>
+        :root { --bg: #222; }
+        body { 
+            margin: 0; background: var(--bg); color: white; 
+            font-family: -apple-system, sans-serif;
+            height: 100dvh; display: flex; flex-direction: column;
+            background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); /* 漂亮的漸層背景 */
+        }
+
+        /* 頂部狀態列 */
+        #status-bar {
+            padding: 10px 20px; display: flex; justify-content: space-between;
+            font-size: 14px; font-weight: bold;
+        }
+
+        /* 桌面 Icon 區域 */
+        #home-screen {
+            flex: 1; display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 20px; padding: 30px; align-content: start;
+        }
+
+        .app-icon {
+            display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white;
+        }
+        .icon-box {
+            width: 60px; height: 60px; border-radius: 14px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 30px; margin-bottom: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* Dock 欄（底部常用 APP） */
+        #dock {
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+            margin: 20px; padding: 15px; border-radius: 30px;
+            display: flex; justify-content: space-around;
+        }
+    </style>
+</head>
+<body>
+
+<div id="status-bar">
+    <span id="live-time">18:09</span>
+    <span>📶 🔋 100%</span>
+</div>
+
+<div id="home-screen">
+    <a href="chat.html" class="app-icon">
+        <div class="icon-box" style="background: #4285f4;">💬</div>
+        <span style="font-size: 12px;">AI 助手</span>
+    </a>
+
+    <a href="clock.html" class="app-icon">
+        <div class="icon-box" style="background: #ff9800;">⏰</div>
+        <span style="font-size: 12px;">時鐘</span>
+    </a>
+
+    <div class="app-icon">
+        <div class="icon-box" style="background: #00bcd4;">☁️</div>
+        <span style="font-size: 12px;">氣象</span>
+    </div>
+
+    <div class="app-icon">
+        <div class="icon-box" style="background: #e91e63;">🧸</div>
+        <span style="font-size: 12px;">娃娃圖庫</span>
+    </div>
+</div>
+
+<div id="dock">
+    <a href="chat.html" style="font-size: 24px; text-decoration: none;">💬</a>
+    <a href="https://github.com" style="font-size: 24px; text-decoration: none;">🐙</a>
+    <div onclick="location.reload()" style="font-size: 24px;">🏠</div>
+</div>
+
+<script>
+    function updateTime() {
+        const now = new Date();
+        document.getElementById('live-time').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+</script>
+</body>
+</html>

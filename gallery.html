@@ -117,7 +117,7 @@
 
     // 刪除照片邏輯
     function deletePhoto(index) {
-        if (confirm("確定要刪除這張照片嗎喵？")) {
+        if (confirm("確定要刪除這張照片嗎？")) {
             photoList.splice(index, 1);
             localStorage.setItem('my_photos', JSON.stringify(photoList));
             renderGallery();
@@ -127,7 +127,7 @@
     function setWallpaper(imageData) {
         if (confirm("要將此圖片設為桌面背景嗎？")) {
             localStorage.setItem('active_wallpaper', imageData);
-            alert("桌布更換成功喵！");
+            alert("桌布更換完成");
         }
     }
 

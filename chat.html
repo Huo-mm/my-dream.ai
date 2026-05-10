@@ -107,7 +107,27 @@
         location.reload();
     }
 
-    function clearHistory() { if(confirm("確定要刪除紀錄？")) { localStorage.removeItem('chat_history'); location.reload(); } }
+    // --- 修改後的清除紀錄：會先存入記憶倉庫 ---
+    function clearHistory() {
+        if(confirm("要將目前的對話存入「記憶倉庫」並清除紀錄嗎？")) {
+            const history = JSON.parse(localStorage.getItem('chat_history')) || [];
+            if(history.length > 0) {
+                // 將對話轉為純文字格式
+                const textContent = history.map(m => `${m.role === 'user' ? '使用者' : '助手'}: ${m.parts[0].text}`).join('\n');
+                const archives = JSON.parse(localStorage.getItem('chat_archives') || "[]");
+                
+                // 存入倉庫陣列的最前面
+                archives.unshift({
+                    date: new Date().toLocaleString(),
+                    content: textContent
+                });
+                localStorage.setItem('chat_archives', JSON.stringify(archives));
+            }
+            
+            localStorage.removeItem('chat_history');
+            location.reload();
+        }
+    }
 
     async function initModel() {
         const key = localStorage.getItem('my_ai_key');
@@ -143,23 +163,23 @@
         // --- 1. 讀取時鐘數據 ---
         const savedAlarms = localStorage.getItem('my_alarms') || "目前沒有設定鬧鐘";
         
-        // --- 2. 讀取備忘錄數據 (新增的部分) ---
-        const savedNotes = JSON.parse(localStorage.getItem('user_notes') || "[]");
-        const notesContext = savedNotes.length > 0 ? savedNotes.join('、') : "目前沒有備忘錄紀錄";
+        // --- 2. 讀取分類後的備忘錄數據 ---
+        const userPrefs = JSON.parse(localStorage.getItem('user_prefs') || "[]").join('、') || "無紀錄";
+        const userTodos = JSON.parse(localStorage.getItem('user_todos') || "[]").join('、') || "目前沒事做";
         
         const now = new Date();
         
-        // 組合完整的背景資訊
+        // 組合更詳細的背景資訊
         const systemContext = `
-【當前系統環境資訊】
+【當前個人化環境資訊】
 1. 現在時間：${now.toLocaleString()}
-2. 鬧鐘清單：${savedAlarms}
-3. 使用者備忘錄與個人偏好：${notesContext}
+2. 使用者個人偏好 (Preferences)：${userPrefs}
+3. 使用者待辦清單 (To-Do List)：${userTodos}
+4. 系統鬧鐘設定：${savedAlarms}
 
-請根據以上資訊與使用者對話。
-- 如果使用者問起他的喜好、討厭的東西或待辦事項，請參考「備忘錄」。
-- 如果使用者問時間或鬧鐘，請參考「鬧鐘清單」。
-- 請保持親切，像是一個了解使用者的好夥伴喵！
+【回覆準則】
+- 如果使用者提到的個人喜好不在「個人偏好」中，請默默記住並引導他去備忘錄修改。
+- 回話請保持溫暖與智慧，適時加入「喵」作為語助詞。
 `;
         
         try {
@@ -167,7 +187,6 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    // 將人設 (char_prompt) + 系統背景資訊 (systemContext) 傳給 AI
                     system_instruction: { 
                         parts: [{ text: (localStorage.getItem('char_prompt') || "") + systemContext }] 
                     },
@@ -181,10 +200,10 @@
             if(chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
             localStorage.setItem('chat_history', JSON.stringify(chatHistory));
         } catch (e) { 
-            addBubble("連線異常，請檢查設定或 API Key 是否正確喵。", 'a'); 
+            addBubble("連線異常，請檢查設定或 API Key 喵。", 'a'); 
         }
     }
-    
+
     function addBubble(t, type, scroll = true) {
         const box = document.getElementById('chat-box');
         const div = document.createElement('div');

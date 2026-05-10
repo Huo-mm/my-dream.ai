@@ -48,54 +48,78 @@
     <button class="add-btn" onclick="addAlarm()">+ 新增鬧鐘</button>
 </div>
 
-<script>
-    let alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
+let alarms = [];
+
+    // 初始化時先從讀取數據
+    try {
+        alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
+    } catch(e) {
+        alarms = [];
+    }
 
     function updateClock() {
         const now = new Date();
         const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
         document.getElementById('big-clock').innerText = timeStr;
         
-        // 更新日期
         const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
         document.getElementById('date-info').innerText = now.toLocaleDateString('zh-TW', options);
 
-        // 核心檢查：每一秒比對一次 HH:MM
         const currentHM = timeStr.substring(0, 5); 
         checkAlarms(currentHM);
     }
 
     function checkAlarms(currentTime) {
-        let changed = false;
+        let hasChanges = false;
         alarms.forEach((alarm) => {
-            // 如果鬧鐘是開啟狀態且時間到了
             if (alarm.active && alarm.time === currentTime) {
-                alarm.active = false; // 響過後關閉，避免重複跳窗
-                changed = true;
-                
-                // 使用瀏覽器內建通知視窗
+                alarm.active = false; // 響過就關閉
+                hasChanges = true;
+                // 延遲一點點跳出，確保時鐘先更新到該分鐘
                 setTimeout(() => {
                     alert(`⏰ 鬧鐘提醒：現在是 ${currentTime} 喵！`);
                 }, 100);
             }
         });
 
-        if (changed) {
+        if (hasChanges) {
             saveAlarms();
             renderAlarms();
         }
     }
 
+    // 修正後的新增函數
     function addAlarm() {
-        const time = prompt("設定鬧鐘時間 (例如 08:30):");
-        if (time && time.includes(":")) {
-            // 補齊格式，例如 8:5 改成 08:05
-            const parts = time.split(':');
-            const h = parts[0].padStart(2, '0');
-            const m = parts[1].padStart(2, '0');
-            alarms.push({ time: `${h}:${m}`, active: true });
+        const userInput = prompt("設定鬧鐘時間 (例如 08:30 或 14:00):", "");
+        
+        if (userInput === null) return; // 使用者按了取消
+
+        if (userInput.trim() === "") {
+            alert("不能輸入空白喔喵！");
+            return;
+        }
+
+        // 檢查是否包含冒號
+        if (userInput.includes(":")) {
+            const parts = userInput.split(':');
+            const h = parts[0].trim().padStart(2, '0');
+            const m = parts[1].trim().padStart(2, '0');
+            
+            // 驗證數字是否合法
+            const hInt = parseInt(h);
+            const mInt = parseInt(m);
+
+            if (isNaN(hInt) || isNaN(mInt) || hInt > 23 || mInt > 59) {
+                alert("時間格式不正確喵！請輸入 00:00 到 23:59 之間。");
+                return;
+            }
+
+            const finalTime = `${h}:${m}`;
+            alarms.push({ time: finalTime, active: true });
             saveAlarms();
             renderAlarms();
+        } else {
+            alert("格式錯誤！記得中間要加冒號『 : 』喵！\n例如：07:30");
         }
     }
 
@@ -116,15 +140,15 @@
             return;
         }
         
-        // 按時間排序
+        // 重新排序
         alarms.sort((a, b) => a.time.localeCompare(b.time));
 
         container.innerHTML = alarms.map((a, i) => `
             <div class="alarm-item ${a.active ? '' : 'expired'}">
                 <div class="alarm-time">${a.time}</div>
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <span style="font-size:12px; color:${a.active ? '#4cd964' : '#666'}">
-                        ${a.active ? '🔔 啟動中' : '⚪ 已響過'}
+                    <span style="font-size:11px; color:${a.active ? '#4cd964' : '#666'}">
+                        ${a.active ? '啟動中' : '已響過'}
                     </span>
                     <button class="delete-btn" onclick="deleteAlarm(${i})">刪除</button>
                 </div>

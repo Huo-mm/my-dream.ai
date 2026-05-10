@@ -1,130 +1,83 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI 助手 - 已連結</title>
-    <style>
-        :root { --primary: #4285f4; --bg: #f8f9fa; --chat-bg: #ffffff; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            margin: 0; background: var(--bg); 
-            font-family: -apple-system, system-ui, sans-serif; 
-            display: flex; height: 100dvh; 
-            overflow: hidden; 
-        }
-        
-        /* 側邊欄與遮罩 */
-        #sidebar { 
-            width: 300px; background: white; border-right: 1px solid #eee; 
-            padding: 20px; display: flex; flex-direction: column; 
-            position: fixed; left: -300px; top: 0; bottom: 0; 
-            transition: transform 0.3s ease; z-index: 1000;
-        }
-        #sidebar.open { transform: translateX(300px); }
-        #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 900; }
-        #sidebar.open + #overlay { display: block; }
-        
-        #main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
-        
-        /* 頂部導航列：加入返回按鈕 */
-        .app-bar { 
-            background: var(--primary); color: white; padding: 12px 16px; 
-            display: flex; align-items: center; gap: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10;
-        }
-        .back-btn { text-decoration: none; color: white; font-size: 24px; padding: 0 5px; cursor: pointer; }
-        .menu-btn { cursor: pointer; font-size: 20px; margin-left: auto; } /* 齒輪移到最右邊 */
-        .title { font-weight: 600; font-size: 17px; flex: 1; text-align: center; margin-right: -20px; }
-
-        #chat-box { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
-        
-        .msg { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; max-width: 85%; word-wrap: break-word; }
-        .u { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 4px; }
-        .a { align-self: flex-start; background: var(--chat-bg); color: #333; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        
-        .input-area { 
-            background: white; padding: 10px 16px; 
-            padding-bottom: calc(10px + env(safe-area-inset-bottom));
-            border-top: 1px solid #eee; display: flex; align-items: center; gap: 10px;
-        }
-        #userInput { flex: 1; border: 1px solid #e0e0e0; padding: 10px 16px; border-radius: 24px; outline: none; font-size: 16px; background: #f1f3f4; }
-        .send-btn { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
-
-        .set-group { margin-bottom: 15px; }
-        label { font-size: 13px; font-weight: bold; color: #555; display: block; margin-bottom: 5px; }
-        textarea, .set-input { width: 100%; border: 1px solid #ddd; padding: 10px; border-radius: 8px; font-size: 14px; resize: none; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-    </style>
-</head>
-<body>
-
-<div id="sidebar">
-    <h2 style="margin-top:0">系統設定</h2>
-    <div class="set-group"><label>Google API Key</label><input type="text" id="apiKey" class="set-input"></div>
-    <div class="set-group"><label>顯示名稱</label><input type="text" id="charName" class="set-input"></div>
-    <div class="set-group"><label>角色人設 (Prompt)</label><textarea id="charPrompt" rows="8"></textarea></div>
-    <button class="btn-action" style="background: #28a745; color:white;" onclick="saveSettings()">儲存設定</button>
-    <button class="btn-action" style="background: #eee; color:#666;" onclick="clearHistory()">清除對話紀錄</button>
-</div>
-
-<div id="overlay" onclick="toggleSidebar()"></div>
-
-<div id="main">
-    <div class="app-bar">
-        <a href="index.html" class="back-btn">❮</a>
-        <div class="title" id="display-name">AI 助手</div>
-        <div class="menu-btn" onclick="toggleSidebar()">⚙️</div>
-    </div>
-    
-    <div id="chat-box"></div>
-
-    <div class="input-area">
-        <input type="text" id="userInput" placeholder="說點什麼..." onkeypress="if(event.key==='Enter')send()">
-        <button class="send-btn" onclick="send()">✈</button>
-    </div>
-</div>
-
-<script>
-    let chatHistory = JSON.parse(localStorage.getItem('chat_history')) || [];
+// 狀態管理：目前選中的角色 ID
+    let currentId = localStorage.getItem('active_char_id') || 'default';
+    let chatHistory = [];
+    let characters = JSON.parse(localStorage.getItem('char_configs')) || {
+        'default': { name: "AI 助手", prompt: "你是一個親切的助手喵。", history: [] }
+    };
     let activeModel = "";
 
     function loadSettings() {
+        const char = characters[currentId];
         document.getElementById('apiKey').value = localStorage.getItem('my_ai_key') || "";
-        document.getElementById('charName').value = localStorage.getItem('char_name') || "AI 助手";
-        document.getElementById('charPrompt').value = localStorage.getItem('char_prompt') || "你是一個親切的助手。";
-        document.getElementById('display-name').innerText = document.getElementById('charName').value;
+        document.getElementById('charName').value = char.name;
+        document.getElementById('charPrompt').value = char.prompt;
+        document.getElementById('display-name').innerText = char.name;
+        chatHistory = char.history || [];
+        
+        renderCharList(); // 渲染側邊欄的角色清單
     }
 
-    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+    // --- 新增：在側邊欄顯示角色清單 ---
+    function renderCharList() {
+        let listHTML = `<label>切換角色</label><select id="charSelector" class="set-input" onchange="switchChar(this.value)" style="margin-bottom:10px;">`;
+        for (let id in characters) {
+            listHTML += `<option value="${id}" ${id === currentId ? 'selected' : ''}>${characters[id].name}</option>`;
+        }
+        listHTML += `</select><button class="btn-action" style="background:#007bff; color:white; margin-bottom:20px;" onclick="addNewChar()">+ 建立新角色</button>`;
+        
+        // 插入到 API Key 設定上方
+        const sidebar = document.getElementById('sidebar');
+        const oldSelector = document.getElementById('charSelectorArea');
+        if(oldSelector) oldSelector.remove();
+        
+        const div = document.createElement('div');
+        div.id = 'charSelectorArea';
+        div.innerHTML = listHTML;
+        sidebar.insertBefore(div, sidebar.firstChild.nextSibling);
+    }
 
-    function saveSettings() {
-        localStorage.setItem('my_ai_key', document.getElementById('apiKey').value.trim());
-        localStorage.setItem('char_name', document.getElementById('charName').value.trim());
-        localStorage.setItem('char_prompt', document.getElementById('charPrompt').value.trim());
-        alert("設定已儲存！");
+    function switchChar(id) {
+        currentId = id;
+        localStorage.setItem('active_char_id', id);
         location.reload();
     }
 
-    // --- 修改後的清除紀錄：會先存入記憶倉庫 ---
+    function addNewChar() {
+        const name = prompt("請輸入新角色的名字：", "新朋友");
+        if(!name) return;
+        const id = 'char_' + Date.now();
+        characters[id] = { name: name, prompt: "你是一個新的角色。", history: [] };
+        saveToLocalStorage();
+        switchChar(id);
+    }
+
+    function saveSettings() {
+        localStorage.setItem('my_ai_key', document.getElementById('apiKey').value.trim());
+        
+        // 更新目前角色的設定
+        characters[currentId].name = document.getElementById('charName').value.trim();
+        characters[currentId].prompt = document.getElementById('charPrompt').value.trim();
+        
+        saveToLocalStorage();
+        alert("角色設定已更新！");
+        location.reload();
+    }
+
+    function saveToLocalStorage() {
+        localStorage.setItem('char_configs', JSON.stringify(characters));
+    }
+
+    // 修改清除紀錄：針對當前角色
     function clearHistory() {
-        if(confirm("要將目前的對話存入「記憶倉庫」並清除紀錄嗎？")) {
-            const history = JSON.parse(localStorage.getItem('chat_history')) || [];
-            if(history.length > 0) {
-                // 將對話轉為純文字格式
-                const textContent = history.map(m => `${m.role === 'user' ? '使用者' : '助手'}: ${m.parts[0].text}`).join('\n');
+        if(confirm("要將此角色的對話存入「記憶倉庫」並清空嗎？")) {
+            if(chatHistory.length > 0) {
+                const textContent = chatHistory.map(m => `${m.role === 'user' ? '使用者' : characters[currentId].name}: ${m.parts[0].text}`).join('\n');
                 const archives = JSON.parse(localStorage.getItem('chat_archives') || "[]");
-                
-                // 存入倉庫陣列的最前面
-                archives.unshift({
-                    date: new Date().toLocaleString(),
-                    content: textContent
-                });
+                archives.unshift({ date: new Date().toLocaleString() + ` (${characters[currentId].name})`, content: textContent });
                 localStorage.setItem('chat_archives', JSON.stringify(archives));
             }
-            
-            localStorage.removeItem('chat_history');
+            characters[currentId].history = [];
+            saveToLocalStorage();
             location.reload();
         }
     }
@@ -160,26 +113,15 @@
         input.value = '';
         const userMsg = { role: "user", parts: [{ text: text }] };
 
-        // --- 1. 讀取時鐘數據 ---
-        const savedAlarms = localStorage.getItem('my_alarms') || "目前沒有設定鬧鐘";
-        
-        // --- 2. 讀取分類後的備忘錄數據 ---
+        // 讀取備忘錄、鬧鐘
         const userPrefs = JSON.parse(localStorage.getItem('user_prefs') || "[]").join('、') || "無紀錄";
         const userTodos = JSON.parse(localStorage.getItem('user_todos') || "[]").join('、') || "目前沒事做";
-        
+        const savedAlarms = localStorage.getItem('my_alarms') || "無鬧鐘";
         const now = new Date();
         
-        // 組合更詳細的背景資訊
         const systemContext = `
-【當前個人化環境資訊】
-1. 現在時間：${now.toLocaleString()}
-2. 使用者個人偏好 (Preferences)：${userPrefs}
-3. 使用者待辦清單 (To-Do List)：${userTodos}
-4. 系統鬧鐘設定：${savedAlarms}
-
-【回覆準則】
-- 如果使用者提到的個人喜好不在「個人偏好」中，請默默記住並引導他去備忘錄修改。
-- 回話請保持溫暖與智慧，適時加入「喵」作為語助詞。
+【當前個人化環境】時間：${now.toLocaleString()} | 喜好：${userPrefs} | 待辦：${userTodos} | 鬧鐘：${savedAlarms}
+【角色靈魂設定】${characters[currentId].prompt}
 `;
         
         try {
@@ -187,20 +129,21 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    system_instruction: { 
-                        parts: [{ text: (localStorage.getItem('char_prompt') || "") + systemContext }] 
-                    },
+                    system_instruction: { parts: [{ text: systemContext }] },
                     contents: [...chatHistory, userMsg]
                 })
             });
             const data = await response.json();
             const aiText = data.candidates[0].content.parts[0].text;
             addBubble(aiText, 'a');
+            
+            // 更新並儲存此角色的對話歷史
             chatHistory.push(userMsg, { role: "model", parts: [{ text: aiText }] });
             if(chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
-            localStorage.setItem('chat_history', JSON.stringify(chatHistory));
+            characters[currentId].history = chatHistory;
+            saveToLocalStorage();
         } catch (e) { 
-            addBubble("連線異常，請檢查設定或 API Key 喵。", 'a'); 
+            addBubble("連線異常喵。", 'a'); 
         }
     }
 
@@ -218,7 +161,3 @@
         renderMessages();
         await initModel();
     };
-</script>
-
-</body>
-</html>

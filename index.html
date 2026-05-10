@@ -75,10 +75,16 @@
         <div class="icon-box" style="background: #e91e63;">🖼️</div>
         <span style="font-size: 12px;">相簿</span>
     </a>
+
+    <a href="notes.html" class="app-icon">
+        <div class="icon-box" style="background: #4caf50;">📝</div>
+        <span style="font-size: 12px;">備忘錄</span>
+    </a>
 </div>
 
 <div id="dock">
     <a href="chat.html" class="dock-item" title="AI助手">💬</a>
+    <a href="notes.html" class="dock-item" title="備忘錄">📝</a>
     <a href="gallery.html" class="dock-item" title="相簿">🖼️</a>
     <a href="weather.html" class="dock-item" title="氣象">☁️</a>
     <a href="clock.html" class="dock-item" title="時鐘">⏰</a>
@@ -122,11 +128,10 @@
         }
     }
 
-    // 合併後的初始化邏輯
     window.onload = function() {
         updateTime();
         loadWallpaper();
-        checkAlarmsOnHome(); // 啟動即檢查一次
+        checkAlarmsOnHome();
         
         setInterval(updateTime, 1000);
         setInterval(checkAlarmsOnHome, 1000);

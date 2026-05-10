@@ -7,16 +7,21 @@
     <style>
         :root { --bg: #222; }
         body { 
-            margin: 0; background: var(--bg); color: white; 
+            margin: 0; color: white; 
             font-family: -apple-system, sans-serif;
             height: 100dvh; display: flex; flex-direction: column;
-            background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); /* 漂亮的漸層背景 */
+            /* 預設背景，若相簿沒設圖會顯示這個 */
+            background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
+            background-size: cover;
+            background-position: center;
+            transition: background-image 0.5s ease-in-out;
         }
 
         /* 頂部狀態列 */
         #status-bar {
             padding: 10px 20px; display: flex; justify-content: space-between;
             font-size: 14px; font-weight: bold;
+            background: rgba(0,0,0,0.1);
         }
 
         /* 桌面 Icon 區域 */
@@ -33,20 +38,24 @@
             width: 60px; height: 60px; border-radius: 14px;
             display: flex; justify-content: center; align-items: center;
             font-size: 30px; margin-bottom: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
         }
+        .icon-box:active { transform: scale(0.9); }
 
         /* Dock 欄（底部常用 APP） */
         #dock {
-            background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
-            margin: 20px; padding: 15px; border-radius: 30px;
-            display: flex; justify-content: space-around;
+            background: rgba(255,255,255,0.25); backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            margin: 20px; padding: 12px; border-radius: 28px;
+            display: flex; justify-content: space-around; align-items: center;
         }
+        .dock-item { text-decoration: none; font-size: 26px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="status-bar">
-    <span id="live-time">18:09</span>
+    <span id="live-time">00:00</span>
     <span>📶 🔋 100%</span>
 </div>
 
@@ -66,25 +75,49 @@
         <span style="font-size: 12px;">氣象</span>
     </div>
 
-    <div class="app-icon">
-        <div class="icon-box" style="background: #e91e63;">🧸</div>
-        <span style="font-size: 12px;">娃娃圖庫</span>
-    </div>
+    <a href="gallery.html" class="app-icon">
+        <div class="icon-box" style="background: #e91e63;">🖼️</div>
+        <span style="font-size: 12px;">相簿</span>
+    </a>
 </div>
 
 <div id="dock">
-    <a href="chat.html" style="font-size: 24px; text-decoration: none;">💬</a>
-    <a href="chat.html" style="font-size: 24px; text-decoration: none;">🐙</a>
-    <div onclick="location.reload()" style="font-size: 24px;">🏠</div>
+    <a href="chat.html" class="dock-item">💬</a>
+    <a href="gallery.html" class="dock-item">🖼️</a>
+    <a href="clock.html" class="dock-item">⏰</a>
+    <div onclick="location.reload()" class="dock-item">🏠</div>
 </div>
 
 <script>
+    // 1. 更新時間
     function updateTime() {
         const now = new Date();
-        document.getElementById('live-time').innerText = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+        document.getElementById('live-time').innerText = 
+            now.getHours().toString().padStart(2, '0') + ":" + 
+            now.getMinutes().toString().padStart(2, '0');
     }
-    setInterval(updateTime, 1000);
-    updateTime();
+
+    // 2. 讀取相簿設定的桌布
+    function loadWallpaper() {
+        const savedWallpaper = localStorage.getItem('active_wallpaper');
+        if(savedWallpaper) {
+            document.body.style.backgroundImage = `url(${savedWallpaper})`;
+        }
+    }
+
+    // 初始化
+    window.onload = function() {
+        updateTime();
+        loadWallpaper();
+        setInterval(updateTime, 1000);
+    };
+
+    // 監聽來自其他頁面的數據變動（當你在相簿換圖，桌面也會即時知道）
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'active_wallpaper') {
+            loadWallpaper();
+        }
+    });
 </script>
 </body>
 </html>

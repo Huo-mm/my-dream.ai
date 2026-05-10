@@ -8,24 +8,41 @@
         :root { --primary: #e91e63; }
         body { margin: 0; background: #fff; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; text-align: center; }
         .app-bar { padding: 20px; display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; border-bottom: 1px solid #ddd; }
-        a { text-decoration: none; color: var(--primary); font-size: 16px; }
+        a { text-decoration: none; color: var(--primary); font-size: 16px; font-weight: bold; }
         h3 { margin: 0; }
         
         /* 相簿網格 */
         #gallery-grid {
             flex: 1; overflow-y: auto; padding: 15px;
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-content: start;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-content: start;
         }
+        
+        /* 圖片外殼 */
+        .photo-item {
+            position: relative; width: 100%; aspect-ratio: 1/1;
+        }
+        
         .thumb-box {
-            width: 100%; aspect-ratio: 1/1; border-radius: 8px; overflow: hidden;
+            width: 100%; height: 100%; border-radius: 12px; overflow: hidden;
             border: 2px solid transparent; cursor: pointer; transition: 0.2s;
-            background: #eee;
+            background: #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .thumb-box:hover { border-color: var(--primary); }
         .thumb-box img { width: 100%; height: 100%; object-fit: cover; }
         
-        .upload-area { padding: 20px; border-top: 1px solid #eee; }
-        .btn { background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 30px; font-weight: bold; cursor: pointer; }
+        /* 刪除按鈕樣式 */
+        .del-btn {
+            position: absolute; top: -5px; right: -5px;
+            background: rgba(255, 59, 48, 0.9); color: white;
+            border: none; width: 24px; height: 24px; border-radius: 50%;
+            font-size: 16px; font-weight: bold; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .upload-area { padding: 20px; border-top: 1px solid #eee; background: white; }
+        .btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -33,7 +50,8 @@
 <div class="app-bar">
     <a href="index.html">❮ 桌面</a>
     <h3>相簿</h3>
-    <span style="width:40px"></span> </div>
+    <span style="width:40px"></span>
+</div>
 
 <div id="gallery-grid">
     </div>
@@ -50,40 +68,70 @@
         const grid = document.getElementById('gallery-grid');
         grid.innerHTML = "";
         
+        if (photoList.length === 0) {
+            grid.innerHTML = `<p style="grid-column: span 3; color: #aaa; margin-top: 50px;">這裡還沒有照片喵～</p>`;
+            return;
+        }
+
         photoList.forEach((data, index) => {
+            const container = document.createElement('div');
+            container.className = 'photo-item';
+
+            // 刪除按鈕
+            const delBtn = document.createElement('button');
+            delBtn.className = 'del-btn';
+            delBtn.innerHTML = '×';
+            delBtn.onclick = (e) => {
+                e.stopPropagation(); // 防止觸發設定桌布
+                deletePhoto(index);
+            };
+
+            // 圖片方塊
             const box = document.createElement('div');
             box.className = 'thumb-box';
-            box.onclick = () => setWallpaper(data); // 點擊設定桌布
+            box.onclick = () => setWallpaper(data);
             
             const img = document.createElement('img');
             img.src = data;
+            
             box.appendChild(img);
-            grid.appendChild(box);
+            container.appendChild(delBtn);
+            container.appendChild(box);
+            grid.appendChild(container);
         });
     }
 
-    // 將新照片上傳並存入緩存
     function uploadPhoto(event) {
         const file = event.target.files[0];
+        if (!file) return;
+        
         const reader = new FileReader();
         reader.onload = function(e) {
             const imageData = e.target.result;
-            photoList.push(imageData); // 加入陣列
-            localStorage.setItem('my_photos', JSON.stringify(photoList)); // 存入緩存
+            photoList.push(imageData);
+            localStorage.setItem('my_photos', JSON.stringify(photoList));
             renderGallery();
         };
         reader.readAsDataURL(file);
     }
 
-    // 【關鍵】將選定的圖片存為桌布路徑
-    function setWallpaper(imageData) {
-        if(confirm("確定要把這張圖設為桌面背景嗎喵？")) {
-            localStorage.setItem('active_wallpaper', imageData);
-            alert("桌布已更新喵！返回桌面看看吧。");
+    // 刪除照片邏輯
+    function deletePhoto(index) {
+        if (confirm("確定要刪除這張照片嗎喵？")) {
+            photoList.splice(index, 1);
+            localStorage.setItem('my_photos', JSON.stringify(photoList));
+            renderGallery();
         }
     }
 
-    renderGallery(); // 初始化
+    function setWallpaper(imageData) {
+        if (confirm("要將此圖片設為桌面背景嗎？")) {
+            localStorage.setItem('active_wallpaper', imageData);
+            alert("桌布更換成功喵！");
+        }
+    }
+
+    renderGallery();
 </script>
 </body>
 </html>

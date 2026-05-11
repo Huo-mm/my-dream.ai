@@ -9,8 +9,7 @@
         body { margin: 0; background: var(--bg); font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; }
         .app-bar { padding: 20px; display: flex; align-items: center; justify-content: space-between; background: white; border-bottom: 1px solid #ddd; }
         a { text-decoration: none; color: var(--primary); font-size: 16px; font-weight: bold; }
-        
-        /* 選單區域 */
+
         .selector-area { padding: 15px; background: white; text-align: center; border-bottom: 1px solid #eee; }
         #citySelect { 
             width: 90%; padding: 12px; border-radius: 10px; border: 1px solid #ccc; 
@@ -25,12 +24,12 @@
         .city-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
         .temp { font-size: 64px; font-weight: bold; margin: 10px 0; }
         .condition { font-size: 20px; opacity: 0.9; }
-        
+
         .details { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px; }
         .info-box { background: white; padding: 15px; border-radius: 16px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .info-label { font-size: 12px; color: #888; margin-bottom: 5px; }
         .info-value { font-size: 18px; font-weight: bold; color: #333; }
-        
+
         .status-msg { font-size: 14px; color: #666; margin-top: 20px; text-align: center; }
     </style>
 </head>
@@ -69,8 +68,8 @@
             <div class="info-value" id="windspeed">-- km/h</div>
         </div>
         <div class="info-box">
-            <div class="info-label">降雨機率 (代碼)</div>
-            <div class="info-value" id="weatherCode">--</div>
+            <div class="info-label">降雨機率</div>
+            <div class="info-value" id="rainProbability">-- %</div>
         </div>
     </div>
 </div>
@@ -78,7 +77,6 @@
 <div id="status" class="status-msg">請從上方選單選擇地點。</div>
 
 <script>
-    // 經緯度資料庫
     const cityMap = {
         "taipei": { lat: 25.03, lon: 121.56, name: "台北市" },
         "taoyuan": { lat: 24.99, lon: 121.30, name: "桃園市" },
@@ -105,20 +103,29 @@
         document.getElementById('weather-content').style.display = 'none';
 
         try {
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            // 修改後的 API 請求：加入了 hourly=precipitation_probability
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=precipitation_probability`);
             const data = await res.json();
+            
             const current = data.current_weather;
             
+            // 邏輯：獲取當前小時的降雨機率
+            const now = new Date();
+            const currentHour = now.getHours();
+            // 從 hourly 資料中找到對應目前小時的降雨機率
+            const rainProb = data.hourly.precipitation_probability[currentHour] || 0;
+
             document.getElementById('cityName').innerText = displayName;
             document.getElementById('temp').innerText = `${Math.round(current.temperature)}°C`;
             document.getElementById('desc').innerText = translateCondition(current.weathercode);
             document.getElementById('windspeed').innerText = `${current.windspeed} km/h`;
-            document.getElementById('weatherCode').innerText = `#${current.weathercode}`;
             
+            // 更新降雨機率顯示為百分比
+            document.getElementById('rainProbability').innerText = `${rainProb}%`;
+
             document.getElementById('weather-content').style.display = 'block';
             document.getElementById('status').style.display = 'none';
-            
-            // 儲存最後一次選擇
+
             localStorage.setItem('last_city_key', document.getElementById('citySelect').value);
         } catch (e) {
             document.getElementById('status').innerText = "讀取失敗喵，請檢查網路。";

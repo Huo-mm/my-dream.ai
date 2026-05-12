@@ -5,42 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>視覺自定義中心</title>
     <style>
-        :root { --color-a: #4285f4; --color-b: #1a2a6c; --modal-color: #4285f4; }
+        :root { --primary: #007aff; --bg: #f4f4f9; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
-            margin: 0; background: #f4f4f9; font-family: -apple-system, sans-serif;
-            padding: calc(env(safe-area-inset-top) + 20px) 20px env(safe-area-inset-bottom);
+            margin: 0; background: var(--bg); font-family: -apple-system, sans-serif;
+            padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px);
             color: #333;
         }
         .header { display: flex; align-items: center; margin-bottom: 25px; }
-        .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; }
+        .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; color: #333; }
         
         .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .card-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .card-title { font-size: 16px; font-weight: bold; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; color: #111; }
         
-        .dual-picker { display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px; }
-        .picker-group { text-align: center; }
+        /* APP 選色列 */
+        .app-row { 
+            display: flex; align-items: center; justify-content: space-between; 
+            padding: 12px 0; border-bottom: 1px solid #f0f0f0; 
+        }
+        .app-row:last-child { border-bottom: none; }
+        .app-info { display: flex; align-items: center; gap: 12px; }
+        .app-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; }
+        
+        .picker-wrapper { position: relative; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid #eee; }
         input[type="color"] {
-            -webkit-appearance: none; border: none; width: 60px; height: 60px; border-radius: 15px; cursor: pointer; background: none;
+            position: absolute; top: -5px; left: -5px; width: 50px; height: 50px; border: none; cursor: pointer; background: none;
         }
-        input[type="color"]::-webkit-color-swatch { border: 2px solid #eee; border-radius: 15px; }
 
-        .preview-area {
-            display: flex; gap: 10px; align-items: center; padding: 12px;
-            background: #f0f0f0; border-radius: 15px; margin-bottom: 15px;
-        }
-        #iconPreview { width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        #bgPreview { flex: 1; height: 45px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; }
-
-        .control-group { display: flex; flex-direction: column; gap: 10px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         .btn {
-            border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 600;
-            cursor: pointer; transition: 0.2s; background: #eee; color: #333;
+            border: none; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: 0.2s; background: #eee; color: #333; text-align: center;
         }
-        .btn-primary { background: #007aff; color: white; }
-        .btn-save { background: #34c759; color: white; padding: 8px 15px; border-radius: 8px; font-size: 12px; }
-        .btn-danger { background: #ff3b30; color: white; margin-top: 10px; }
+        .btn-primary { background: #007aff; color: white; grid-column: span 2; }
+        .btn-danger { background: #fff1f0; color: #ff3b30; grid-column: span 2; }
 
-        /* ✨ 自製彈窗樣式 */
+        /* ✨ 彈窗樣式 */
         #customModal {
             display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
             background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;
@@ -49,20 +49,13 @@
         .modal-content {
             background:white; width:80%; max-width:300px; border-radius:25px; 
             overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
-        .modal-header { padding:15px; text-align:center; color:white; font-weight:bold; font-size: 16px; }
-        .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; line-height: 1.4; }
+        .modal-header { padding:15px; text-align:center; color:white; font-weight:bold; }
+        .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; }
         .modal-footer { display:flex; border-top:1px solid #eee; }
-        .modal-btn {
-            flex:1; padding:15px; border:none; background:white; 
-            color:#007aff; font-weight:bold; font-size:16px; cursor:pointer;
-        }
+        .modal-btn { flex:1; padding:15px; border:none; background:white; color:#007aff; font-weight:bold; font-size:16px; cursor:pointer; }
 
-        @keyframes popIn {
-            from { transform: scale(0.85); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
+        @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -73,54 +66,68 @@
 </div>
 
 <div class="card">
-    <div class="card-title">🎨 系統漸層色彩</div>
-    <div class="dual-picker">
-        <div class="picker-group">
-            <input type="color" id="colorA" value="#4285f4">
-            <div style="font-size:11px; color:#888; margin-top:5px;">顏色 A</div>
+    <div class="card-title">🌐 桌面系統主題 (全域)</div>
+    <div style="display: flex; justify-content: space-around; margin-bottom: 15px; background: #f9f9f9; padding: 15px; border-radius: 15px;">
+        <div style="text-align:center">
+            <div class="picker-wrapper"><input type="color" id="sysColorA" oninput="saveLive('theme_color_a', this.value)"></div>
+            <div style="font-size:10px; color:#999; margin-top:5px;">左漸層</div>
         </div>
-        <div style="font-size:20px; color:#ccc;">➡️</div>
-        <div class="picker-group">
-            <input type="color" id="colorB" value="#1a2a6c">
-            <div style="font-size:11px; color:#888; margin-top:5px;">顏色 B</div>
+        <div style="font-size:20px; color:#ddd; padding-top:5px;">➡</div>
+        <div style="text-align:center">
+            <div class="picker-wrapper"><input type="color" id="sysColorB" oninput="saveLive('theme_color_b', this.value)"></div>
+            <div style="font-size:10px; color:#999; margin-top:5px;">右漸層</div>
         </div>
     </div>
-    <div class="preview-area">
-        <div id="iconPreview">📱</div>
-        <div id="bgPreview">系統預覽</div>
-    </div>
-    <div class="control-group">
-        <button class="btn btn-primary" onclick="applyToAll()">一鍵套用全系統漸層</button>
-    </div>
+    <button class="btn btn-primary" onclick="syncAllToSystem()">將所有 APP 同步為系統色</button>
 </div>
 
 <div class="card">
-    <div class="card-title">✨ 獨立細節選色</div>
+    <div class="card-title">📱 獨立 APP 選色</div>
     
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <input type="color" id="modalColor" value="#4285f4" style="width:45px; height:45px;">
-            <div style="font-size:14px; font-weight:500;">彈窗標題色</div>
+    <div class="app-row">
+        <div class="app-info">
+            <div class="app-icon" style="background: #4285f4;">💬</div>
+            <div>
+                <div style="font-size:14px; font-weight:500;">AI 聊天室</div>
+                <div style="font-size:11px; color:#999;">影響氣泡與 AppBar</div>
+            </div>
         </div>
-        <button class="btn-save" onclick="saveModalColor()">儲存標題色</button>
+        <div class="picker-wrapper"><input type="color" id="colorChat" oninput="saveLive('app_chat_color_a', this.value)"></div>
     </div>
 
-    <div style="display: flex; align-items: center; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <input type="color" id="bubbleColor" value="#4285f4" style="width:45px; height:45px;">
-            <div style="font-size:14px; font-weight:500;">對話氣泡色</div>
+    <div class="app-row">
+        <div class="app-info">
+            <div class="app-icon" style="background: #ff9800;">⏰</div>
+            <div>
+                <div style="font-size:14px; font-weight:500;">時鐘 APP</div>
+                <div style="font-size:11px; color:#999;">影響指針與鬧鐘色</div>
+            </div>
         </div>
-        <button class="btn-save" onclick="saveBubbleColor()">儲存氣泡色</button>
+        <div class="picker-wrapper"><input type="color" id="colorClock" oninput="saveLive('app_clock_color_a', this.value)"></div>
+    </div>
+
+    <div class="app-row">
+        <div class="app-info">
+            <div class="app-icon" style="background: #673ab7;">📦</div>
+            <div>
+                <div style="font-size:14px; font-weight:500;">記憶倉庫</div>
+                <div style="font-size:11px; color:#999;">影響卡片與列表</div>
+            </div>
+        </div>
+        <div class="picker-wrapper"><input type="color" id="colorArchive" oninput="saveLive('app_archive_color_a', this.value)"></div>
     </div>
 </div>
 
 <div class="card">
-    <div class="card-title">⚙️ 更多選項</div>
-    <div class="control-group">
-        <button class="btn" onclick="applyToIconsOnly()">僅修改 App 圖示</button>
-        <button class="btn" onclick="applyToBgOnly()">僅修改 背景漸層</button>
-        <button class="btn" onclick="removeWallpaper()">移除桌布圖片</button>
-        <button class="btn btn-danger" onclick="resetAll()">強制重設所有設定</button>
+    <div class="card-title">🖼️ 背景與元件</div>
+    <div class="app-row">
+        <div style="font-size:14px;">彈窗標題顏色</div>
+        <div class="picker-wrapper"><input type="color" id="colorModal" oninput="saveLive('theme_modal_color', this.value)"></div>
+    </div>
+    <div class="btn-group">
+        <button class="btn" onclick="clearWallpaper()">恢復漸層背景</button>
+        <button class="btn" onclick="location.href='wallpaper.html'">更換桌布圖片</button>
+        <button class="btn btn-danger" onclick="resetFactory()">恢復工廠出設</button>
     </div>
 </div>
 
@@ -128,99 +135,71 @@
     <div class="modal-content">
         <div id="modalHeader" class="modal-header">標題</div>
         <div id="modalBody" class="modal-body">內容文字</div>
-        <div class="modal-footer">
-            <button class="modal-btn" onclick="closeModal()">確定</button>
-        </div>
+        <div class="modal-footer"><button class="modal-btn" onclick="closeModal()">好喵！</button></div>
     </div>
 </div>
 
 <script>
-    const pA = document.getElementById('colorA');
-    const pB = document.getElementById('colorB');
-    const pModal = document.getElementById('modalColor');
-    const pBubble = document.getElementById('bubbleColor');
-    const iP = document.getElementById('iconPreview');
-    const bP = document.getElementById('bgPreview');
+    // 即時儲存函數
+    function saveLive(key, value) {
+        localStorage.setItem(key, value);
+        // 如果是修改系統色 A，同步更新氣泡色與彈窗色 (作為預設)
+        if(key === 'theme_color_a') {
+            if(!localStorage.getItem('theme_modal_color')) localStorage.setItem('theme_modal_color', value);
+            if(!localStorage.getItem('chat_bubble_color')) localStorage.setItem('chat_bubble_color', value);
+        }
+    }
 
-    // 💡 自製通知函數
-    function showNotify(title, message) {
+    function syncAllToSystem() {
+        const colorA = document.getElementById('sysColorA').value;
+        localStorage.setItem('app_chat_color_a', colorA);
+        localStorage.setItem('app_clock_color_a', colorA);
+        localStorage.setItem('app_archive_color_a', colorA);
+        localStorage.setItem('theme_modal_color', colorA);
+        localStorage.setItem('chat_bubble_color', colorA);
+        
+        // 更新 UI
+        document.getElementById('colorChat').value = colorA;
+        document.getElementById('colorClock').value = colorA;
+        document.getElementById('colorArchive').value = colorA;
+        document.getElementById('colorModal').value = colorA;
+        
+        showNotify('同步完成', '所有 APP 已統一為系統主色喵！');
+    }
+
+    function showNotify(title, msg) {
         const modal = document.getElementById('customModal');
         const header = document.getElementById('modalHeader');
-        
-        // 抓取獨立的彈窗標題顏色
-        const customModalColor = localStorage.getItem('theme_modal_color') || pA.value;
-        header.style.background = customModalColor;
-        
+        header.style.background = localStorage.getItem('theme_modal_color') || '#007aff';
         document.getElementById('modalHeader').innerText = title;
-        document.getElementById('modalBody').innerText = message;
+        document.getElementById('modalBody').innerText = msg;
         modal.style.display = 'flex';
     }
 
-    function closeModal() {
-        document.getElementById('customModal').style.display = 'none';
-    }
+    function closeModal() { document.getElementById('customModal').style.display = 'none'; }
 
-    function updatePreview() {
-        const grad = `linear-gradient(135deg, ${pA.value}, ${pB.value})`;
-        iP.style.background = grad;
-        bP.style.background = grad;
-    }
-
-    pA.addEventListener('input', updatePreview);
-    pB.addEventListener('input', updatePreview);
-
-    function applyToAll() {
-        localStorage.setItem('theme_color_a', pA.value);
-        localStorage.setItem('theme_color_b', pB.value);
-        localStorage.setItem('bg_color_a', pA.value);
-        localStorage.setItem('bg_color_b', pB.value);
+    function clearWallpaper() {
+        localStorage.removeItem('active_wallpaper');
         localStorage.setItem('bg_style', 'gradient');
-        localStorage.removeItem('active_wallpaper');
-        showNotify('系統指令', '漸層配色已全面套用喵！✨');
+        showNotify('設定成功', '已恢復為動態漸層背景。');
     }
 
-    function saveModalColor() {
-        localStorage.setItem('theme_modal_color', pModal.value);
-        showNotify('視覺中心', '彈窗標題顏色已獨立更新！');
-    }
-
-    function saveBubbleColor() {
-        localStorage.setItem('chat_bubble_color', pBubble.value);
-        showNotify('視覺中心', '對話氣泡顏色已獨立更新！');
-    }
-
-    function applyToIconsOnly() {
-        localStorage.setItem('theme_color_a', pA.value);
-        localStorage.setItem('theme_color_b', pB.value);
-        showNotify('圖示更新', 'App 圖示漸層已更新。');
-    }
-
-    function applyToBgOnly() {
-        localStorage.setItem('bg_color_a', pA.value);
-        localStorage.setItem('bg_color_b', pB.value);
-        localStorage.setItem('bg_style', 'gradient');
-        localStorage.removeItem('active_wallpaper');
-        showNotify('背景更新', '背景漸層已獨立套用。');
-    }
-
-    function removeWallpaper() {
-        localStorage.removeItem('active_wallpaper');
-        showNotify('桌布管理', '已恢復為漸層背景。');
-    }
-
-    function resetAll() {
-        if(confirm('確定要清除所有自定義設定嗎？')) {
+    function resetFactory() {
+        if(confirm('確定要重置所有視覺設定嗎？這會清除顏色與桌布喔！')) {
             localStorage.clear();
             location.reload();
         }
     }
 
     window.onload = () => {
-        pA.value = localStorage.getItem('theme_color_a') || '#4285f4';
-        pB.value = localStorage.getItem('theme_color_b') || '#1a2a6c';
-        pModal.value = localStorage.getItem('theme_modal_color') || pA.value;
-        pBubble.value = localStorage.getItem('chat_bubble_color') || pA.value;
-        updatePreview();
+        // 載入所有設定值
+        document.getElementById('sysColorA').value = localStorage.getItem('theme_color_a') || '#4285f4';
+        document.getElementById('sysColorB').value = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        
+        document.getElementById('colorChat').value = localStorage.getItem('app_chat_color_a') || '#4285f4';
+        document.getElementById('colorClock').value = localStorage.getItem('app_clock_color_a') || '#ff9800';
+        document.getElementById('colorArchive').value = localStorage.getItem('app_archive_color_a') || '#673ab7';
+        document.getElementById('colorModal').value = localStorage.getItem('theme_modal_color') || '#4285f4';
     };
 </script>
 </body>

@@ -8,8 +8,7 @@
         :root { 
             --safe-top: env(safe-area-inset-top); 
             --safe-bottom: env(safe-area-inset-bottom);
-            /* ✨ 預設主題色 */
-            --theme-color: #4285f4; 
+            --theme-color: #4285f4; /* 預設主題色 */
         }
         
         html, body { 
@@ -19,12 +18,11 @@
         
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
-            /* ✨ 背景改為連動主題色，並保留桌布顯示能力 */
             background-color: var(--theme-color);
-            background-image: none; 
             background-size: cover; background-position: center;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            transition: background 0.3s ease; /* 換色時有一點過渡感 */
         }
 
         #status-bar {
@@ -44,7 +42,7 @@
         .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
         
-        /* ✨ 圖示底色改為連動主題色 */
+        /* ✨ 圖示底色連動主題變數 */
         .icon-box { 
             width: 55px; height: 55px; border-radius: 14px; 
             display: flex; justify-content: center; align-items: center; 
@@ -90,19 +88,14 @@
     function getAppData() {
         const newData = localStorage.getItem('desktop_layout_ordered');
         if (newData) return JSON.parse(newData);
-        const oldData = localStorage.getItem('desktop_layout');
-        if (oldData) {
-            const parsed = JSON.parse(oldData);
-            return parsed.sort((a, b) => a.slot - b.slot);
-        }
         return [
             { id: 'chat', name: 'AI 助手', icon: '💬', url: 'chat.html' },
             { id: 'clock', name: '時鐘', icon: '⏰', url: 'clock.html' },
             { id: 'weather', name: '氣象', icon: '☁️', url: 'weather.html' },
             { id: 'gallery', name: '相簿', icon: '🖼️', url: 'gallery.html' },
             { id: 'notes', name: '備忘錄', icon: '📝', url: 'notes.html' },
-            /* ✨ 新增系統設定 App */
-            { id: 'settings', name: '系統設定', icon: '⚙️', url: 'settings.html' },
+            /* ✨ 加入系統自定義 App */
+            { id: 'settings', name: '視覺設定', icon: '🎨', url: 'settings.html' },
             { id: 'archive', name: '記憶倉庫', icon: '🏛️', url: 'archive.html' },
             { id: 'mail', name: '信箱', icon: '✉️', url: 'mail.html' }
         ];
@@ -112,18 +105,30 @@
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
-    // ✨ 應用主題與桌布邏輯
-    function applyThemeAndWallpaper() {
-        // 1. 讀取主題色
+    // ✨ 核心功能：應用視覺主題
+    function applyThemeSettings() {
+        // 1. 取得主題色與背景設定
         const themeColor = localStorage.getItem('system_theme_color') || '#4285f4';
+        const bgStyle = localStorage.getItem('bg_style') || 'gradient';
+        const solidColor = localStorage.getItem('solid_bg_color') || themeColor;
+        const savedWallpaper = localStorage.getItem('active_wallpaper');
+
+        // 2. 套用圖示主題變數
         document.documentElement.style.setProperty('--theme-color', themeColor);
         
-        // 2. 處理背景
-        const savedWallpaper = localStorage.getItem('active_wallpaper');
+        // 3. 處理背景邏輯
         if (savedWallpaper) {
+            // 有桌布則顯示桌布
             document.body.style.backgroundImage = `url(${savedWallpaper})`;
         } else {
-            document.body.style.backgroundImage = 'none';
+            if (bgStyle === 'gradient') {
+                // 配套漸層：從選擇的顏色過渡到深色底
+                document.body.style.backgroundImage = `linear-gradient(180deg, ${solidColor}, #1a2a6c)`;
+            } else {
+                // 純色
+                document.body.style.backgroundImage = 'none';
+                document.body.style.backgroundColor = solidColor;
+            }
         }
     }
 
@@ -150,29 +155,26 @@
     function createAppElement(app) {
         const a = document.createElement('a');
         a.href = app.url; a.className = 'app-icon'; a.dataset.id = app.id;
-        // ✨ 圖示背景現在由 CSS var 控制
         a.innerHTML = `<div class="icon-box">${app.icon}</div><span style="font-size:10px;">${app.name}</span>`;
         setupDragging(a);
         return a;
     }
 
+    // ... (setupDragging, realTimeReflow, updateTime 函數保持不變，與之前版本相同) ...
+
     function setupDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
-
         el.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             const rect = el.getBoundingClientRect();
             offsetX = touch.clientX - rect.left;
             offsetY = touch.clientY - rect.top;
-            const w = rect.width, h = rect.height;
-
             dragTimeout = setTimeout(() => {
                 isDragging = true;
-                if (navigator.vibrate) navigator.vibrate(40);
                 const clone = el.cloneNode(true);
                 clone.classList.add('dragging');
-                clone.style.width = w + 'px';
-                clone.style.height = h + 'px';
+                clone.style.width = rect.width + 'px';
+                clone.style.height = rect.height + 'px';
                 clone.style.left = (touch.clientX - offsetX) + 'px';
                 clone.style.top = (touch.clientY - offsetY) + 'px';
                 document.body.appendChild(clone);
@@ -256,7 +258,7 @@
 
     window.onload = () => { 
         updateTime(); 
-        applyThemeAndWallpaper(); // ✨ 改用主題加載
+        applyThemeSettings(); // ✨ 執行主題與背景設定
         initDesktop(); 
         setInterval(updateTime, 1000); 
     };

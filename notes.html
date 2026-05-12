@@ -66,7 +66,26 @@
         }
         .add-btn:active { opacity: 0.7; }
 
+        /* ✨ 系統通知彈窗樣式 */
+        #customModal {
+            display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;
+            backdrop-filter: blur(8px);
+        }
+        .modal-content {
+            background:white; width:85%; max-width:320px; border-radius:28px; 
+            overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .modal-header { padding:18px; text-align:center; color:var(--text-on-primary); background: var(--primary); font-weight:bold; font-size: 16px; }
+        .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; line-height:1.5; }
+        .modal-footer { display:flex; border-top:1px solid #eee; }
+        .modal-btn { flex:1; padding:16px; border:none; background:white; color:var(--primary); font-weight:bold; font-size:16px; cursor:pointer; }
+        .modal-btn:last-child { border-left: 1px solid #eee; }
+        .modal-btn:active { background: #f9f9f9; }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -89,19 +108,29 @@
     <button class="add-btn" onclick="addItem()">新增</button>
 </div>
 
+<!-- ✨ 系統風格通知彈窗 -->
+<div id="customModal">
+    <div class="modal-content">
+        <div id="modalHeader" class="modal-header">通知</div>
+        <div id="modalBody" class="modal-body">內容文字</div>
+        <div class="modal-footer" id="modalFooter">
+            <!-- 按鈕由 JS 動態生成 -->
+        </div>
+    </div>
+</div>
+
 <script>
     let currentTab = 'pref';
     let data = {
         pref: JSON.parse(localStorage.getItem('user_prefs')) || [],
         todo: JSON.parse(localStorage.getItem('user_todos')) || []
     };
+    let pendingDeleteIndex = null;
 
-    // ✨ 注入獨立選色邏輯
     function applyTheme() {
         const memoColor = localStorage.getItem('app_memo_color_a') || '#4caf50';
         document.documentElement.style.setProperty('--primary', memoColor);
         
-        // 智慧計算文字顏色
         const r = parseInt(memoColor.slice(1,3), 16);
         const g = parseInt(memoColor.slice(3,5), 16);
         const b = parseInt(memoColor.slice(5,7), 16);
@@ -109,6 +138,29 @@
         const textColor = brightness > 180 ? '#333333' : '#ffffff';
         document.documentElement.style.setProperty('--text-on-primary', textColor);
     }
+
+    // ✨ 彈窗邏輯：支援「確認」與「取消」
+    function showModal(title, msg, onConfirm = null) {
+        const modal = document.getElementById('customModal');
+        document.getElementById('modalHeader').innerText = title;
+        document.getElementById('modalBody').innerText = msg;
+        const footer = document.getElementById('modalFooter');
+        
+        if (onConfirm) {
+            // 確認型彈窗
+            footer.innerHTML = `
+                <button class="modal-btn" style="color:#888" onclick="closeModal()">取消</button>
+                <button class="modal-btn" id="confirmBtn">確定</button>
+            `;
+            document.getElementById('confirmBtn').onclick = () => { onConfirm(); closeModal(); };
+        } else {
+            // 通知型彈窗
+            footer.innerHTML = `<button class="modal-btn" onclick="closeModal()">確定</button>`;
+        }
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('customModal').style.display = 'none'; }
 
     function switchTab(tab) {
         currentTab = tab;
@@ -132,7 +184,7 @@
         container.innerHTML = data[currentTab].map((text, index) => `
             <div class="note-card">
                 <span class="note-text">${currentTab === 'todo' ? '📌 ' : '🔹 '}${text}</span>
-                <button class="del-btn" onclick="deleteItem(${index})">🗑️</button>
+                <button class="del-btn" onclick="confirmDelete(${index})">🗑️</button>
             </div>
         `).join('');
     }
@@ -146,16 +198,15 @@
         save();
         input.value = "";
         
-        // 自動滾動到底部
         const container = document.getElementById('list-container');
         setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
     }
 
-    function deleteItem(index) {
-        if (confirm("確定要刪除這條記錄嗎？")) {
+    function confirmDelete(index) {
+        showModal("確認刪除", "確定要永久移除這條記錄嗎喵？", () => {
             data[currentTab].splice(index, 1);
             save();
-        }
+        });
     }
 
     function save() {
@@ -164,7 +215,6 @@
         render();
     }
 
-    // 初始化
     applyTheme();
     render();
 </script>

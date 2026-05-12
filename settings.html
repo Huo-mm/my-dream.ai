@@ -9,76 +9,79 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             margin: 0; background: var(--bg); font-family: -apple-system, sans-serif;
-            padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px);
+            padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 30px);
             color: #333;
         }
         .header { display: flex; align-items: center; margin-bottom: 25px; }
         .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; color: #333; }
         
-        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .card-title { font-size: 16px; font-weight: bold; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; color: #111; }
+        .card { background: white; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        .card-title { font-size: 17px; font-weight: bold; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; color: #000; }
         
-        /* APP 選色列 */
         .app-row { 
             display: flex; align-items: center; justify-content: space-between; 
-            padding: 12px 0; border-bottom: 1px solid #f0f0f0; 
+            padding: 14px 0; border-bottom: 1px solid #f2f2f2; 
         }
         .app-row:last-child { border-bottom: none; }
         .app-info { display: flex; align-items: center; gap: 12px; }
-        .app-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; }
+        .app-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; }
         
-        .picker-wrapper { position: relative; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid #eee; }
+        .picker-wrapper { 
+            position: relative; width: 42px; height: 42px; border-radius: 50%; 
+            overflow: hidden; border: 3px solid #fff; box-shadow: 0 0 0 1px #ddd;
+        }
         input[type="color"] {
-            position: absolute; top: -5px; left: -5px; width: 50px; height: 50px; border: none; cursor: pointer; background: none;
+            position: absolute; top: -5px; left: -5px; width: 60px; height: 60px; border: none; cursor: pointer; background: none;
         }
 
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
         .btn {
-            border: none; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600;
+            border: none; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 600;
             cursor: pointer; transition: 0.2s; background: #eee; color: #333; text-align: center;
         }
-        .btn-primary { background: #007aff; color: white; grid-column: span 2; }
-        .btn-danger { background: #fff1f0; color: #ff3b30; grid-column: span 2; }
+        .btn-primary { background: var(--primary); color: white; grid-column: span 2; }
+        .btn-danger { background: #fff1f0; color: #ff3b30; grid-column: span 2; margin-top: 10px; }
 
         /* ✨ 彈窗樣式 */
         #customModal {
             display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
             background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(8px);
         }
         .modal-content {
-            background:white; width:80%; max-width:300px; border-radius:25px; 
+            background:white; width:85%; max-width:320px; border-radius:28px; 
             overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
-        .modal-header { padding:15px; text-align:center; color:white; font-weight:bold; }
-        .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; }
+        .modal-header { padding:18px; text-align:center; color:white; font-weight:bold; font-size: 16px; }
+        .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; line-height:1.5; }
         .modal-footer { display:flex; border-top:1px solid #eee; }
-        .modal-btn { flex:1; padding:15px; border:none; background:white; color:#007aff; font-weight:bold; font-size:16px; cursor:pointer; }
+        .modal-btn { flex:1; padding:16px; border:none; background:white; color:#007aff; font-weight:bold; font-size:16px; cursor:pointer; }
 
-        @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <a href="index.html" class="back-btn">⬅️</a>
-    <h1 style="font-size: 22px; margin: 0;">視覺自定義中心</h1>
+    <a href="index.html" class="back-btn">❮</a>
+    <h1 style="font-size: 22px; margin: 0; letter-spacing: -0.5px;">視覺自定義中心</h1>
 </div>
 
 <div class="card">
-    <div class="card-title">🌐 桌面系統主題 (全域)</div>
-    <div style="display: flex; justify-content: space-around; margin-bottom: 15px; background: #f9f9f9; padding: 15px; border-radius: 15px;">
+    <div class="card-title">🌐 桌面系統主題</div>
+    <div style="display: flex; justify-content: space-around; align-items: center; background: #f9f9f9; padding: 20px; border-radius: 18px; margin-bottom: 15px;">
         <div style="text-align:center">
             <div class="picker-wrapper"><input type="color" id="sysColorA" oninput="saveLive('theme_color_a', this.value)"></div>
-            <div style="font-size:10px; color:#999; margin-top:5px;">左漸層</div>
+            <div style="font-size:11px; color:#888; margin-top:8px;">顏色 A</div>
         </div>
-        <div style="font-size:20px; color:#ddd; padding-top:5px;">➡</div>
+        <div style="font-size:24px; color:#ddd;">➔</div>
         <div style="text-align:center">
             <div class="picker-wrapper"><input type="color" id="sysColorB" oninput="saveLive('theme_color_b', this.value)"></div>
-            <div style="font-size:10px; color:#999; margin-top:5px;">右漸層</div>
+            <div style="font-size:11px; color:#888; margin-top:8px;">顏色 B</div>
         </div>
     </div>
-    <button class="btn btn-primary" onclick="syncAllToSystem()">將所有 APP 同步為系統色</button>
+    <button class="btn btn-primary" onclick="syncAllToSystem()">一鍵同步所有 APP 為系統色</button>
 </div>
 
 <div class="card">
@@ -88,8 +91,8 @@
         <div class="app-info">
             <div class="app-icon" style="background: #4285f4;">💬</div>
             <div>
-                <div style="font-size:14px; font-weight:500;">AI 聊天室</div>
-                <div style="font-size:11px; color:#999;">影響氣泡與 AppBar</div>
+                <div style="font-size:14px; font-weight:600;">AI 聊天室</div>
+                <div style="font-size:11px; color:#999;">影響對話氣泡與標題列</div>
             </div>
         </div>
         <div class="picker-wrapper"><input type="color" id="colorChat" oninput="saveLive('app_chat_color_a', this.value)"></div>
@@ -99,8 +102,8 @@
         <div class="app-info">
             <div class="app-icon" style="background: #ff9800;">⏰</div>
             <div>
-                <div style="font-size:14px; font-weight:500;">時鐘 APP</div>
-                <div style="font-size:11px; color:#999;">影響指針與鬧鐘色</div>
+                <div style="font-size:14px; font-weight:600;">時鐘 APP</div>
+                <div style="font-size:11px; color:#999;">影響鬧鐘清單與強調色</div>
             </div>
         </div>
         <div class="picker-wrapper"><input type="color" id="colorClock" oninput="saveLive('app_clock_color_a', this.value)"></div>
@@ -110,24 +113,35 @@
         <div class="app-info">
             <div class="app-icon" style="background: #673ab7;">📦</div>
             <div>
-                <div style="font-size:14px; font-weight:500;">記憶倉庫</div>
-                <div style="font-size:11px; color:#999;">影響卡片與列表</div>
+                <div style="font-size:14px; font-weight:600;">記憶倉庫</div>
+                <div style="font-size:11px; color:#999;">影響列表與分類卡片</div>
             </div>
         </div>
         <div class="picker-wrapper"><input type="color" id="colorArchive" oninput="saveLive('app_archive_color_a', this.value)"></div>
+    </div>
+
+    <div class="app-row">
+        <div class="app-info">
+            <div class="app-icon" style="background: #e91e63;">📖</div>
+            <div>
+                <div style="font-size:14px; font-weight:600;">我的日記</div>
+                <div style="font-size:11px; color:#999;">影響日記頁面與字體裝飾</div>
+            </div>
+        </div>
+        <div class="picker-wrapper"><input type="color" id="colorDiary" oninput="saveLive('app_diary_color_a', this.value)"></div>
     </div>
 </div>
 
 <div class="card">
     <div class="card-title">🖼️ 背景與元件</div>
     <div class="app-row">
-        <div style="font-size:14px;">彈窗標題顏色</div>
+        <div style="font-size:14px; font-weight:500;">全系統彈窗標題色</div>
         <div class="picker-wrapper"><input type="color" id="colorModal" oninput="saveLive('theme_modal_color', this.value)"></div>
     </div>
     <div class="btn-group">
         <button class="btn" onclick="clearWallpaper()">恢復漸層背景</button>
-        <button class="btn" onclick="location.href='wallpaper.html'">更換桌布圖片</button>
-        <button class="btn btn-danger" onclick="resetFactory()">恢復工廠出設</button>
+        <button class="btn" style="background:#007aff; color:white;" onclick="location.href='gallery.html'">進入相簿選桌布</button>
+        <button class="btn btn-danger" onclick="resetFactory()">重設所有設定</button>
     </div>
 </div>
 
@@ -135,36 +149,34 @@
     <div class="modal-content">
         <div id="modalHeader" class="modal-header">標題</div>
         <div id="modalBody" class="modal-body">內容文字</div>
-        <div class="modal-footer"><button class="modal-btn" onclick="closeModal()">好喵！</button></div>
+        <div class="modal-footer"><button class="modal-btn" onclick="closeModal()">確定</button></div>
     </div>
 </div>
 
 <script>
-    // 即時儲存函數
     function saveLive(key, value) {
         localStorage.setItem(key, value);
-        // 如果是修改系統色 A，同步更新氣泡色與彈窗色 (作為預設)
+        // 如果是修改系統主色，自動更新彈窗色作為配套
         if(key === 'theme_color_a') {
-            if(!localStorage.getItem('theme_modal_color')) localStorage.setItem('theme_modal_color', value);
-            if(!localStorage.getItem('chat_bubble_color')) localStorage.setItem('chat_bubble_color', value);
+            localStorage.setItem('theme_modal_color', value);
+            document.getElementById('colorModal').value = value;
         }
     }
 
     function syncAllToSystem() {
         const colorA = document.getElementById('sysColorA').value;
-        localStorage.setItem('app_chat_color_a', colorA);
-        localStorage.setItem('app_clock_color_a', colorA);
-        localStorage.setItem('app_archive_color_a', colorA);
-        localStorage.setItem('theme_modal_color', colorA);
-        localStorage.setItem('chat_bubble_color', colorA);
+        const keys = ['app_chat_color_a', 'app_clock_color_a', 'app_archive_color_a', 'app_diary_color_a', 'theme_modal_color', 'chat_bubble_color'];
         
-        // 更新 UI
+        keys.forEach(key => localStorage.setItem(key, colorA));
+        
+        // 更新當前頁面的 UI
         document.getElementById('colorChat').value = colorA;
         document.getElementById('colorClock').value = colorA;
         document.getElementById('colorArchive').value = colorA;
+        document.getElementById('colorDiary').value = colorA;
         document.getElementById('colorModal').value = colorA;
         
-        showNotify('同步完成', '所有 APP 已統一為系統主色喵！');
+        showNotify('同步成功', '所有 APP 的色彩已統一！');
     }
 
     function showNotify(title, msg) {
@@ -181,24 +193,25 @@
     function clearWallpaper() {
         localStorage.removeItem('active_wallpaper');
         localStorage.setItem('bg_style', 'gradient');
-        showNotify('設定成功', '已恢復為動態漸層背景。');
+        showNotify('背景更新', '已清除桌布，恢復為動態漸層。');
     }
 
     function resetFactory() {
-        if(confirm('確定要重置所有視覺設定嗎？這會清除顏色與桌布喔！')) {
+        if(confirm('確定要清除所有自定義顏色與桌布嗎？')) {
             localStorage.clear();
             location.reload();
         }
     }
 
     window.onload = () => {
-        // 載入所有設定值
+        // 從 Storage 載入所有值
         document.getElementById('sysColorA').value = localStorage.getItem('theme_color_a') || '#4285f4';
         document.getElementById('sysColorB').value = localStorage.getItem('theme_color_b') || '#1a2a6c';
         
         document.getElementById('colorChat').value = localStorage.getItem('app_chat_color_a') || '#4285f4';
         document.getElementById('colorClock').value = localStorage.getItem('app_clock_color_a') || '#ff9800';
         document.getElementById('colorArchive').value = localStorage.getItem('app_archive_color_a') || '#673ab7';
+        document.getElementById('colorDiary').value = localStorage.getItem('app_diary_color_a') || '#e91e63';
         document.getElementById('colorModal').value = localStorage.getItem('theme_modal_color') || '#4285f4';
     };
 </script>

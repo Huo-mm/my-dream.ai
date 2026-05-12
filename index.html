@@ -12,7 +12,6 @@
         
         body, html {
             margin: 0; padding: 0; height: 100%; width: 100%;
-            /* 💡 讓重新整理生效，但禁止手指亂滑導致的位移 */
             overflow-y: auto; overflow-x: hidden;
             background: #1a2a6c;
         }
@@ -25,25 +24,26 @@
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
 
-        /* 💡 恢復半透明底的狀態欄 */
+        /* 💡 精緻半透明狀態欄 */
         #status-bar {
             padding: calc(var(--safe-top) + 5px) 20px 10px 20px;
             display: flex; justify-content: space-between; font-size: 14px;
-            background: rgba(0, 0, 0, 0.25); /* 這裡加回半透明底 */
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             position: sticky; top: 0; z-index: 1000;
         }
 
         #home-screen {
             flex: 1; display: grid; 
-            grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); 
-            gap: 10px; padding: 15px 20px;
+            grid-template-columns: repeat(4, 1fr); 
+            grid-auto-rows: min-content; /* 緊湊排列 */
+            gap: 15px; padding: 20px;
             box-sizing: border-box;
-            min-height: 80vh; /* 確保內容足夠長以觸發下拉刷新 */
+            min-height: 90vh; /* 為了下拉刷新保留高度 */
         }
 
         .grid-slot {
-            width: 100%; height: 100%;
+            aspect-ratio: 1 / 1;
             display: flex; justify-content: center; align-items: center;
         }
 
@@ -51,11 +51,11 @@
             display: flex; flex-direction: column; align-items: center; 
             text-decoration: none; color: white; width: 70px;
             touch-action: none;
-            transition: transform 0.35s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.2s;
+            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
             will-change: transform;
         }
 
-        .source-hidden { opacity: 0 !important; pointer-events: none; }
+        .source-hidden { opacity: 0 !important; }
         
         .icon-box {
             width: 60px; height: 60px; border-radius: 14px;
@@ -64,7 +64,7 @@
         }
 
         .dragging {
-            opacity: 0.9; transform: scale(1.1) !important;
+            opacity: 0.8; transform: scale(1.1) !important;
             position: fixed !important; z-index: 9999;
             pointer-events: none; transition: none !important;
         }
@@ -79,7 +79,7 @@
         .dock-item { text-decoration: none; font-size: 26px; }
     </style>
 </head>
-<body onscroll="handleScroll(event)">
+<body onscroll="if(window.scrollY > 0) window.scrollTo(0,0)">
 
 <div id="status-bar">
     <span id="live-time">00:00</span>
@@ -97,25 +97,20 @@
 </div>
 
 <script>
-    let appData = JSON.parse(localStorage.getItem('desktop_layout')) || [
-        { id: 'chat', name: 'AI 助手', icon: '💬', color: '#4285f4', url: 'chat.html', slot: 0 },
-        { id: 'clock', name: '時鐘', icon: '⏰', color: '#ff9800', url: 'clock.html', slot: 1 },
-        { id: 'weather', name: '氣象', icon: '☁️', color: '#00bcd4', url: 'weather.html', slot: 2 },
-        { id: 'gallery', name: '相簿', icon: '🖼️', color: '#e91e63', url: 'gallery.html', slot: 3 },
-        { id: 'notes', name: '備忘錄', icon: '📝', color: '#4caf50', url: 'notes.html', slot: 4 },
-        { id: 'archive', name: '記憶倉庫', icon: '🏛️', color: '#673ab7', url: 'archive.html', slot: 5 },
-        { id: 'mail', name: '信箱', icon: '✉️', color: '#d44638', url: 'mail.html', slot: 6 }
+    // 💡 補位版：appData 不再記錄 slot，直接按陣列順序渲染
+    let appData = JSON.parse(localStorage.getItem('desktop_layout_ordered')) || [
+        { id: 'chat', name: 'AI 助手', icon: '💬', color: '#4285f4', url: 'chat.html' },
+        { id: 'clock', name: '時鐘', icon: '⏰', color: '#ff9800', url: 'clock.html' },
+        { id: 'weather', name: '氣象', icon: '☁️', color: '#00bcd4', url: 'weather.html' },
+        { id: 'gallery', name: '相簿', icon: '🖼️', color: '#e91e63', url: 'gallery.html' },
+        { id: 'notes', name: '備忘錄', icon: '📝', color: '#4caf50', url: 'notes.html' },
+        { id: 'archive', name: '記憶倉庫', icon: '🏛️', color: '#673ab7', url: 'archive.html' },
+        { id: 'mail', name: '信箱', icon: '✉️', color: '#d44638', url: 'mail.html' }
     ];
 
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout;
     let isReordering = false;
-
-    // 💡 禁止非必要的滑動（鎖定畫面，但保留下拉刷新）
-    function handleScroll(e) {
-        if (window.scrollY < 0) return; // 允許下拉刷新
-        if (window.scrollY > 0) window.scrollTo(0, 0); // 鎖定不准往上捲
-    }
 
     function loadWallpaper() {
         const savedWallpaper = localStorage.getItem('active_wallpaper');
@@ -124,12 +119,18 @@
 
     function initDesktop() {
         homeScreen.innerHTML = '';
-        for (let i = 0; i < 24; i++) {
+        appData.forEach((app, index) => {
+            const slot = document.createElement('div');
+            slot.className = 'grid-slot';
+            slot.dataset.index = index;
+            slot.appendChild(createAppElement(app));
+            homeScreen.appendChild(slot);
+        });
+        // 補滿剩餘空格
+        for (let i = appData.length; i < 24; i++) {
             const slot = document.createElement('div');
             slot.className = 'grid-slot';
             slot.dataset.index = i;
-            const app = appData.find(a => a.slot === i);
-            if (app) slot.appendChild(createAppElement(app));
             homeScreen.appendChild(slot);
         }
     }
@@ -152,12 +153,15 @@
                 isDragging = true;
                 if (navigator.vibrate) navigator.vibrate(40);
                 el.classList.add('source-hidden');
+                
                 const clone = el.cloneNode(true);
                 clone.classList.remove('source-hidden');
                 clone.classList.add('dragging');
                 document.body.appendChild(clone);
                 window._activeClone = clone;
+                
                 updateClonePos(e.touches[0].clientX, e.touches[0].clientY);
+                lastTargetIdx = appData.findIndex(a => a.id === el.dataset.id);
             }, 500);
         }, {passive: true});
 
@@ -173,11 +177,11 @@
             
             if (slot) {
                 const targetIdx = parseInt(slot.dataset.index);
-                if (targetIdx !== lastTargetIdx) {
+                if (targetIdx !== -1 && targetIdx !== lastTargetIdx && targetIdx < appData.length) {
                     lastTargetIdx = targetIdx;
                     isReordering = true;
-                    realTimeSwap(el.dataset.id, targetIdx); // 💡 使用「即時交換」邏輯
-                    setTimeout(() => { isReordering = false; }, 100); 
+                    realTimeReflow(el.dataset.id, targetIdx);
+                    setTimeout(() => { isReordering = false; }, 120); 
                 }
             }
         }, {passive: false});
@@ -187,7 +191,7 @@
             if (!isDragging) return;
             isDragging = false;
             if(window._activeClone) window._activeClone.remove();
-            localStorage.setItem('desktop_layout', JSON.stringify(appData));
+            localStorage.setItem('desktop_layout_ordered', JSON.stringify(appData));
             initDesktop(); 
         });
     }
@@ -199,38 +203,44 @@
         }
     }
 
-    // 💡 自由位移中的「流動閃避」：路過就交換，不影響其他 App 的座標
-    function realTimeSwap(movingId, targetIdx) {
-        const movingApp = appData.find(a => a.id === movingId);
-        const existingApp = appData.find(a => a.slot === targetIdx);
-        
-        if (existingApp && existingApp.id !== movingId) {
-            // FLIP 動畫記錄
-            const targetEl = document.querySelector(`.app-icon[data-id="${existingApp.id}"]`);
-            const rect = targetEl.getBoundingClientRect();
-            
-            // 交換座標
-            const oldSlot = movingApp.slot;
-            existingApp.slot = oldSlot;
-            movingApp.slot = targetIdx;
+    // 💡 補位流水推擠核心
+    function realTimeReflow(movingId, targetIdx) {
+        const allIcons = document.querySelectorAll('.app-icon:not(.dragging)');
+        const firstPositions = {};
+        allIcons.forEach(icon => {
+            const rect = icon.getBoundingClientRect();
+            firstPositions[icon.dataset.id] = { x: rect.left, y: rect.top };
+        });
 
-            // 執行平移動畫
-            const slots = document.querySelectorAll('.grid-slot');
-            slots[oldSlot].appendChild(targetEl);
-            
-            const newRect = targetEl.getBoundingClientRect();
-            const deltaX = rect.left - newRect.left;
-            const deltaY = rect.top - newRect.top;
+        // 重新排列陣列順序
+        const movingItem = appData.find(a => a.id === movingId);
+        const oldIdx = appData.indexOf(movingItem);
+        appData.splice(oldIdx, 1);
+        appData.splice(targetIdx, 0, movingItem);
 
-            targetEl.style.transition = 'none';
-            targetEl.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-            targetEl.offsetWidth; 
-            targetEl.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
-            targetEl.style.transform = 'translate(0, 0)';
-        } else {
-            // 純移動到空位
-            movingApp.slot = targetIdx;
-        }
+        // 重排 DOM
+        const slots = document.querySelectorAll('.grid-slot');
+        appData.forEach((app, index) => {
+            const appEl = document.querySelector(`.app-icon[data-id="${app.id}"]`);
+            if (appEl) slots[index].appendChild(appEl);
+        });
+
+        // 執行 FLIP 絲滑動畫
+        requestAnimationFrame(() => {
+            allIcons.forEach(icon => {
+                const id = icon.dataset.id;
+                const rect = icon.getBoundingClientRect();
+                const deltaX = firstPositions[id].x - rect.left;
+                const deltaY = firstPositions[id].y - rect.top;
+                if (deltaX !== 0 || deltaY !== 0) {
+                    icon.style.transition = 'none';
+                    icon.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    icon.offsetWidth; 
+                    icon.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
+                    icon.style.transform = 'translate(0, 0)';
+                }
+            });
+        });
     }
 
     function updateTime() {

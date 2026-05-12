@@ -5,20 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <title>MINE Personal OS</title>
     <style>
-        :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); }
+        :root { 
+            --safe-top: env(safe-area-inset-top); 
+            --safe-bottom: env(safe-area-inset-bottom);
+            /* ✨ 預設主題色 */
+            --theme-color: #4285f4; 
+        }
         
         html, body { 
             margin: 0; padding: 0; height: 100%; width: 100%; 
-            overflow: auto; /* 💡 保持 auto 讓瀏覽器可以偵測下拉刷新 */
-            background: #1a2a6c; 
+            overflow: auto; background: #1a2a6c; 
         }
         
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
-            background-image: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
+            /* ✨ 背景改為連動主題色，並保留桌布顯示能力 */
+            background-color: var(--theme-color);
+            background-image: none; 
             background-size: cover; background-position: center;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0; /* 💡 確保內容不超出螢幕範圍 */
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         }
 
         #status-bar {
@@ -37,9 +43,16 @@
         .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
-        .icon-box { width: 55px; height: 55px; border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 28px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        
+        /* ✨ 圖示底色改為連動主題色 */
+        .icon-box { 
+            width: 55px; height: 55px; border-radius: 14px; 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 28px; margin-bottom: 4px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            background: var(--theme-color) !important; 
+        }
 
-        /* ✨ 外援推薦的終極影子樣式 */
         .dragging { 
             opacity: 0.9 !important;
             transform: translateZ(0) scale(1.08) !important;
@@ -83,13 +96,15 @@
             return parsed.sort((a, b) => a.slot - b.slot);
         }
         return [
-            { id: 'chat', name: 'AI 助手', icon: '💬', color: '#4285f4', url: 'chat.html' },
-            { id: 'clock', name: '時鐘', icon: '⏰', color: '#ff9800', url: 'clock.html' },
-            { id: 'weather', name: '氣象', icon: '☁️', color: '#00bcd4', url: 'weather.html' },
-            { id: 'gallery', name: '相簿', icon: '🖼️', color: '#e91e63', url: 'gallery.html' },
-            { id: 'notes', name: '備忘錄', icon: '📝', color: '#4caf50', url: 'notes.html' },
-            { id: 'archive', name: '記憶倉庫', icon: '🏛️', color: '#673ab7', url: 'archive.html' },
-            { id: 'mail', name: '信箱', icon: '✉️', color: '#d44638', url: 'mail.html' }
+            { id: 'chat', name: 'AI 助手', icon: '💬', url: 'chat.html' },
+            { id: 'clock', name: '時鐘', icon: '⏰', url: 'clock.html' },
+            { id: 'weather', name: '氣象', icon: '☁️', url: 'weather.html' },
+            { id: 'gallery', name: '相簿', icon: '🖼️', url: 'gallery.html' },
+            { id: 'notes', name: '備忘錄', icon: '📝', url: 'notes.html' },
+            /* ✨ 新增系統設定 App */
+            { id: 'settings', name: '系統設定', icon: '⚙️', url: 'settings.html' },
+            { id: 'archive', name: '記憶倉庫', icon: '🏛️', url: 'archive.html' },
+            { id: 'mail', name: '信箱', icon: '✉️', url: 'mail.html' }
         ];
     }
 
@@ -97,11 +112,23 @@
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
-    // 💡 僅在拖移中攔截滑動，確保下拉刷新可用
-    document.addEventListener('touchmove', (e) => {
-        if (window._activeClone) {
-            if (e.cancelable) e.preventDefault();
+    // ✨ 應用主題與桌布邏輯
+    function applyThemeAndWallpaper() {
+        // 1. 讀取主題色
+        const themeColor = localStorage.getItem('system_theme_color') || '#4285f4';
+        document.documentElement.style.setProperty('--theme-color', themeColor);
+        
+        // 2. 處理背景
+        const savedWallpaper = localStorage.getItem('active_wallpaper');
+        if (savedWallpaper) {
+            document.body.style.backgroundImage = `url(${savedWallpaper})`;
+        } else {
+            document.body.style.backgroundImage = 'none';
         }
+    }
+
+    document.addEventListener('touchmove', (e) => {
+        if (window._activeClone) { if (e.cancelable) e.preventDefault(); }
     }, {passive: false});
 
     function initDesktop() {
@@ -123,7 +150,8 @@
     function createAppElement(app) {
         const a = document.createElement('a');
         a.href = app.url; a.className = 'app-icon'; a.dataset.id = app.id;
-        a.innerHTML = `<div class="icon-box" style="background:${app.color};">${app.icon}</div><span style="font-size:10px;">${app.name}</span>`;
+        // ✨ 圖示背景現在由 CSS var 控制
+        a.innerHTML = `<div class="icon-box">${app.icon}</div><span style="font-size:10px;">${app.name}</span>`;
         setupDragging(a);
         return a;
     }
@@ -134,25 +162,19 @@
         el.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             const rect = el.getBoundingClientRect();
-            const width = rect.width;
-            const height = rect.height;
-
             offsetX = touch.clientX - rect.left;
             offsetY = touch.clientY - rect.top;
+            const w = rect.width, h = rect.height;
 
             dragTimeout = setTimeout(() => {
                 isDragging = true;
                 if (navigator.vibrate) navigator.vibrate(40);
-
                 const clone = el.cloneNode(true);
                 clone.classList.add('dragging');
-
-                /* ✨ 鎖定尺寸與基礎位置 */
-                clone.style.width = width + 'px';
-                clone.style.height = height + 'px';
+                clone.style.width = w + 'px';
+                clone.style.height = h + 'px';
                 clone.style.left = (touch.clientX - offsetX) + 'px';
                 clone.style.top = (touch.clientY - offsetY) + 'px';
-
                 document.body.appendChild(clone);
                 window._activeClone = clone;
                 el.classList.add('source-hidden');
@@ -163,13 +185,10 @@
         el.addEventListener('touchmove', (e) => {
             if (!isDragging) return clearTimeout(dragTimeout);
             const touch = e.touches[0];
-            
             if(window._activeClone) {
-                // ✨ 使用外援推薦的位置更新邏輯
                 window._activeClone.style.left = (touch.clientX - offsetX) + 'px';
                 window._activeClone.style.top = (touch.clientY - offsetY) + 'px';
             }
-
             if (isReordering) return;
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
             const slot = target?.closest('.grid-slot');
@@ -202,18 +221,15 @@
             const rect = icon.getBoundingClientRect();
             firstPos[icon.dataset.id] = { x: rect.left, y: rect.top };
         });
-
         const movingItem = appData.find(a => a.id === movingId);
         const oldIdx = appData.indexOf(movingItem);
         appData.splice(oldIdx, 1);
         appData.splice(targetIdx, 0, movingItem);
-
         const slots = document.querySelectorAll('.grid-slot');
         appData.forEach((app, index) => {
             const appEl = document.querySelector(`.app-icon[data-id="${app.id}"]`);
             if (appEl) slots[index].appendChild(appEl);
         });
-
         requestAnimationFrame(() => {
             allIcons.forEach(icon => {
                 const id = icon.dataset.id;
@@ -238,12 +254,12 @@
             now.getMinutes().toString().padStart(2, '0');
     }
 
-    function loadWallpaper() {
-        const saved = localStorage.getItem('active_wallpaper');
-        if(saved) document.body.style.backgroundImage = `url(${saved})`;
-    }
-
-    window.onload = () => { updateTime(); loadWallpaper(); initDesktop(); setInterval(updateTime, 1000); };
+    window.onload = () => { 
+        updateTime(); 
+        applyThemeAndWallpaper(); // ✨ 改用主題加載
+        initDesktop(); 
+        setInterval(updateTime, 1000); 
+    };
     document.addEventListener('selectstart', (e) => e.preventDefault());
     window.oncontextmenu = (e) => e.preventDefault();
 </script>

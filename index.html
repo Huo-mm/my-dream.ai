@@ -8,7 +8,7 @@
         :root { 
             --safe-top: env(safe-area-inset-top); 
             --safe-bottom: env(safe-area-inset-bottom);
-            /* ✨ 預設雙色漸層 (藍色系) */
+            /* 預設 App 圖示漸層色 */
             --color-a: #4285f4; 
             --color-b: #1a2a6c; 
         }
@@ -17,7 +17,6 @@
         
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
-            /* ✨ 背景改為雙色連動 */
             background-color: var(--color-a);
             background-image: linear-gradient(180deg, var(--color-a), var(--color-b));
             background-size: cover; background-position: center;
@@ -42,13 +41,12 @@
         .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
         
-        /* ✨ App 圖示底色改為漸層 */
+        /* App 圖示底色連動 --color-a 與 --color-b */
         .icon-box { 
             width: 55px; height: 55px; border-radius: 14px; 
             display: flex; justify-content: center; align-items: center; 
             font-size: 28px; margin-bottom: 4px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            /* 135度斜向漸層，讓視覺更有層次 */
             background: linear-gradient(135deg, var(--color-a), var(--color-b)) !important; 
         }
 
@@ -116,26 +114,34 @@
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
-    // ✨ 應用雙色漸層與桌布邏輯
+    // ✨ 核心渲染邏輯：支援分區顏色
     function applyThemeAndWallpaper() {
-        const colorA = localStorage.getItem('theme_color_a') || '#4285f4';
-        const colorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        // 1. 取得 App 圖示用的顏色
+        const iconColorA = localStorage.getItem('theme_color_a') || '#4285f4';
+        const iconColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
         
-        document.documentElement.style.setProperty('--color-a', colorA);
-        document.documentElement.style.setProperty('--color-b', colorB);
+        // 更新 CSS 變數供 App 圖示使用
+        document.documentElement.style.setProperty('--color-a', iconColorA);
+        document.documentElement.style.setProperty('--color-b', iconColorB);
+        
+        // 2. 處理背景邏輯
+        // 優先讀取背景專用色，若沒設定則預設跟隨 App 圖示色
+        const bgColorA = localStorage.getItem('bg_color_a') || iconColorA;
+        const bgColorB = localStorage.getItem('bg_color_b') || iconColorB;
         
         const savedWallpaper = localStorage.getItem('active_wallpaper');
         const bgStyle = localStorage.getItem('bg_style') || 'gradient';
 
         if (savedWallpaper) {
+            // 如果有設定桌布，優先顯示桌布
             document.body.style.backgroundImage = `url(${savedWallpaper})`;
         } else {
             if (bgStyle === 'gradient') {
-                // 使用雙色自定義漸層背景
-                document.body.style.backgroundImage = `linear-gradient(180deg, ${colorA}, ${colorB})`;
+                // 套用背景專屬的漸層
+                document.body.style.backgroundImage = `linear-gradient(180deg, ${bgColorA}, ${bgColorB})`;
             } else {
                 document.body.style.backgroundImage = 'none';
-                document.body.style.backgroundColor = colorA;
+                document.body.style.backgroundColor = bgColorA;
             }
         }
     }

@@ -2,83 +2,21 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MINE Personal OS</title>
     <style>
-        :root { 
-            --safe-top: env(safe-area-inset-top);
-            --safe-bottom: env(safe-area-inset-bottom);
-        }
-        
-        /* 💡 核心修復：徹底鎖定 body 高度，不讓內容撐開 */
-        html, body {
-            margin: 0; padding: 0;
-            height: 100dvh; width: 100vw;
-            overflow: hidden; /* 預設禁止滾動 */
-        }
-
-        body { 
-            color: white; font-family: -apple-system, sans-serif;
-            display: flex; flex-direction: column;
-            background: #1a2a6c;
-            background-image: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
-            background-size: cover; background-position: center;
-            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-        }
-
-        #status-bar {
-            padding: calc(var(--safe-top) + 5px) 20px 10px 20px;
-            display: flex; justify-content: space-between; font-size: 14px;
-            background: rgba(0, 0, 0, 0.25);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            z-index: 1000; flex-shrink: 0; /* 狀態列不縮小 */
-        }
-
-        #home-screen {
-            flex: 1; /* 💡 自動填滿中間所有空間 */
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            grid-template-rows: repeat(6, 1fr); /* 💡 確保格位均分高度，不超出螢幕 */
-            gap: 10px; padding: 10px 20px;
-            box-sizing: border-box;
-            overflow: hidden; /* 防止格位內容溢出 */
-        }
-
-        .grid-slot {
-            width: 100%; height: 100%;
-            display: flex; justify-content: center; align-items: center;
-        }
-
-        .app-icon {
-            display: flex; flex-direction: column; align-items: center; 
-            text-decoration: none; color: white; width: 100%;
-            touch-action: none;
-            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-            will-change: transform;
-        }
-
+        /* 原有的 CSS 樣式保持不變 */
+        :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); }
+        html, body { margin: 0; padding: 0; height: 100dvh; width: 100vw; overflow: hidden; }
+        body { color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; background: #1a2a6c; background-image: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); background-size: cover; background-position: center; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+        #status-bar { padding: calc(var(--safe-top) + 5px) 20px 10px 20px; display: flex; justify-content: space-between; font-size: 14px; background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 1000; flex-shrink: 0; }
+        #home-screen { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); gap: 10px; padding: 10px 20px; box-sizing: border-box; overflow: hidden; }
+        .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1); will-change: transform; }
         .source-hidden { opacity: 0 !important; }
-        
-        .icon-box {
-            width: 55px; height: 55px; border-radius: 14px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 28px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .dragging {
-            opacity: 0.8; transform: scale(1.1) !important;
-            position: fixed !important; z-index: 9999;
-            pointer-events: none; transition: none !important;
-        }
-
-        #dock {
-            background: rgba(255,255,255,0.2); backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            margin: 0 20px calc(var(--safe-bottom) + 15px) 20px;
-            padding: 12px; border-radius: 30px;
-            display: flex; justify-content: space-around;
-            flex-shrink: 0; /* Dock 不縮小 */
-        }
+        .icon-box { width: 55px; height: 55px; border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 28px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .dragging { opacity: 0.8; transform: scale(1.1) !important; position: fixed !important; z-index: 9999; pointer-events: none; transition: none !important; }
+        #dock { background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); margin: 0 20px calc(var(--safe-bottom) + 15px) 20px; padding: 12px; border-radius: 30px; display: flex; justify-content: space-around; flex-shrink: 0; }
         .dock-item { text-decoration: none; font-size: 26px; }
     </style>
 </head>
@@ -88,9 +26,7 @@
     <span id="live-time">00:00</span>
     <span>📶 🔋 100%</span>
 </div>
-
 <div id="home-screen"></div>
-
 <div id="dock">
     <a href="chat.html" class="dock-item">💬</a>
     <a href="notes.html" class="dock-item">📝</a>
@@ -100,6 +36,7 @@
 </div>
 
 <script>
+    // 原有的 appData 和系統函數保持不變
     let appData = JSON.parse(localStorage.getItem('desktop_layout_ordered')) || [
         { id: 'chat', name: 'AI 助手', icon: '💬', color: '#4285f4', url: 'chat.html' },
         { id: 'clock', name: '時鐘', icon: '⏰', color: '#ff9800', url: 'clock.html' },
@@ -114,19 +51,12 @@
     let dragTimeout;
     let isReordering = false;
 
-    // 💡 下拉重新整理的特殊處理：
-    // 我們平時鎖定 body，只有當手指在頂部向下划動時，才允許短暫的滾動效果以觸發刷新。
+    // 下拉刷新的處理保持不變
     let startY = 0;
-    document.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].pageY;
-    }, {passive: true});
-
+    document.addEventListener('touchstart', (e) => { startY = e.touches[0].pageY; }, {passive: true});
     document.addEventListener('touchmove', (e) => {
         const moveY = e.touches[0].pageY;
-        // 如果不是在下拉（也就是往上滑或是在拖移），就徹底禁止
-        if (moveY < startY && !window._activeClone) {
-            if (e.cancelable) e.preventDefault();
-        }
+        if (moveY < startY && !window._activeClone) { if (e.cancelable) e.preventDefault(); }
     }, {passive: false});
 
     function loadWallpaper() {
@@ -159,11 +89,24 @@
         return a;
     }
 
+    // --- 🏆 重點修正：setupDragging 函數 ---
     function setupDragging(el) {
         let isDragging = false;
         let lastTargetIdx = -1;
+        // 💡 宣告變數來儲存手指在圖示內的偏移量
+        let offsetX = 0;
+        let offsetY = 0;
 
         el.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            
+            // 💡 1. 紀錄手指點擊位置在 App 內的偏移量
+            // getBoundingClientRect() 取得原始圖示的視窗座標
+            const rect = el.getBoundingClientRect();
+            // 手指的 X - 圖示的 X = 手指在圖示內的 X 偏移
+            offsetX = touch.clientX - rect.left;
+            offsetY = touch.clientY - rect.top;
+
             dragTimeout = setTimeout(() => {
                 isDragging = true;
                 if (navigator.vibrate) navigator.vibrate(40);
@@ -173,7 +116,9 @@
                 clone.classList.add('dragging');
                 document.body.appendChild(clone);
                 window._activeClone = clone;
-                updateClonePos(e.touches[0].clientX, e.touches[0].clientY);
+                
+                // 💡 2. 使用這個偏移量初始化影子圖示的位置，防止閃現飄移
+                updateClonePos(touch.clientX, touch.clientY, offsetX, offsetY);
                 lastTargetIdx = appData.findIndex(a => a.id === el.dataset.id);
             }, 500);
         }, {passive: true});
@@ -182,7 +127,9 @@
             if (!isDragging) return;
             if (e.cancelable) e.preventDefault();
             const touch = e.touches[0];
-            updateClonePos(touch.clientX, touch.clientY);
+            
+            // 💡 3. 在移動時扣除偏移量，保持圖示黏在手指點擊的位置
+            updateClonePos(touch.clientX, touch.clientY, offsetX, offsetY);
 
             if (isReordering) return;
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -209,13 +156,17 @@
         });
     }
 
-    function updateClonePos(x, y) {
+    // --- 💡 修正：updateClonePos 函數，加入偏移量計算 ---
+    function updateClonePos(x, y, offX, offY) {
         if(window._activeClone) {
-            window._activeClone.style.left = x - 35 + 'px';
-            window._activeClone.style.top = y - 35 + 'px';
+            // 用手指目前的視窗座標，扣掉一開始點擊的偏移量
+            // 這樣影子圖示就會黏在你點擊的那一個點上喵！
+            window._activeClone.style.left = (x - offX) + 'px';
+            window._activeClone.style.top = (y - offY) + 'px';
         }
     }
 
+    // FLIP Animation 的實作保持不變
     function realTimeReflow(movingId, targetIdx) {
         const allIcons = document.querySelectorAll('.app-icon:not(.dragging)');
         const firstPositions = {};

@@ -5,79 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <title>MINE Personal OS</title>
     <style>
-        :root { 
-            --safe-top: env(safe-area-inset-top);
-            --safe-bottom: env(safe-area-inset-bottom);
-        }
-        
-        html, body {
-            margin: 0; padding: 0;
-            height: 100%; width: 100%;
-            /* 💡 恢復 auto 讓瀏覽器偵測下拉，但透過 JS 鎖定上下滑動 */
-            overflow: auto; 
-            background: #1a2a6c;
-        }
-
+        :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); }
+        html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: auto; background: #1a2a6c; }
         body { 
-            color: white; font-family: -apple-system, sans-serif;
-            display: flex; flex-direction: column;
+            color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
             background-image: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
             background-size: cover; background-position: center;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-            position: fixed; /* 鎖定底層不准動 */
-            top: 0; left: 0; right: 0; bottom: 0;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         }
-
         #status-bar {
             padding: calc(var(--safe-top) + 5px) 20px 10px 20px;
             display: flex; justify-content: space-between; font-size: 14px;
-            background: rgba(0, 0, 0, 0.25);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             z-index: 1000; flex-shrink: 0;
         }
-
         #home-screen {
             flex: 1; display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            grid-template-rows: repeat(6, 1fr); 
-            gap: 10px; padding: 10px 20px;
-            box-sizing: border-box;
+            grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); 
+            gap: 10px; padding: 10px 20px; box-sizing: border-box;
         }
-
-        .grid-slot {
-            width: 100%; height: 100%;
-            display: flex; justify-content: center; align-items: center;
-        }
-
-        .app-icon {
-            display: flex; flex-direction: column; align-items: center; 
-            text-decoration: none; color: white; width: 100%;
-            touch-action: none;
-            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
+        .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
-        
-        .icon-box {
-            width: 55px; height: 55px; border-radius: 14px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 28px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .dragging {
-            opacity: 0.9; transform: scale(1.1) !important;
-            position: fixed !important; z-index: 9999;
-            pointer-events: none; transition: none !important;
-        }
-
-        #dock {
-            background: rgba(255,255,255,0.2); backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            margin: 0 20px calc(var(--safe-bottom) + 15px) 20px;
-            padding: 12px; border-radius: 30px;
-            display: flex; justify-content: space-around;
-            flex-shrink: 0;
-        }
+        .icon-box { width: 55px; height: 55px; border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 28px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .dragging { opacity: 0.9; transform: scale(1.1) !important; position: fixed !important; z-index: 9999; pointer-events: none; transition: none !important; }
+        #dock { background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); margin: 0 20px calc(var(--safe-bottom) + 15px) 20px; padding: 12px; border-radius: 30px; display: flex; justify-content: space-around; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -90,35 +43,50 @@
 <div id="home-screen"></div>
 
 <div id="dock">
-    <a href="chat.html" class="dock-item" style="text-decoration:none; font-size:26px;">💬</a>
-    <a href="notes.html" class="dock-item" style="text-decoration:none; font-size:26px;">📝</a>
-    <a href="gallery.html" class="dock-item" style="text-decoration:none; font-size:26px;">🖼️</a>
-    <a href="clock.html" class="dock-item" style="text-decoration:none; font-size:26px;">⏰</a>
+    <a href="chat.html" style="text-decoration:none; font-size:26px;">💬</a>
+    <a href="notes.html" style="text-decoration:none; font-size:26px;">📝</a>
+    <a href="gallery.html" style="text-decoration:none; font-size:26px;">🖼️</a>
+    <a href="clock.html" style="text-decoration:none; font-size:26px;">⏰</a>
     <div onclick="location.reload()" style="cursor:pointer; font-size:26px;">🏠</div>
 </div>
 
 <script>
-    let appData = JSON.parse(localStorage.getItem('desktop_layout_ordered')) || [
-        { id: 'chat', name: 'AI 助手', icon: '💬', color: '#4285f4', url: 'chat.html' },
-        { id: 'clock', name: '時鐘', icon: '⏰', color: '#ff9800', url: 'clock.html' },
-        { id: 'weather', name: '氣象', icon: '☁️', color: '#00bcd4', url: 'weather.html' },
-        { id: 'gallery', name: '相簿', icon: '🖼️', color: '#e91e63', url: 'gallery.html' },
-        { id: 'notes', name: '備忘錄', icon: '📝', color: '#4caf50', url: 'notes.html' },
-        { id: 'archive', name: '記憶倉庫', icon: '🏛️', color: '#673ab7', url: 'archive.html' },
-        { id: 'mail', name: '信箱', icon: '✉️', color: '#d44638', url: 'mail.html' }
-    ];
-
-    const homeScreen = document.getElementById('home-screen');
-    let dragTimeout;
-    let isReordering = false;
-    let offsetX = 0, offsetY = 0;
-
-    // 💡 修正下拉刷新：只有當拖移沒啟動時，完全不干涉 touch 事件
-    document.addEventListener('touchmove', (e) => {
-        if (window._activeClone) {
-            if (e.cancelable) e.preventDefault(); // 拖移中禁止滾動
+    // 💡 資料召回邏輯：如果沒新的，就去找舊的，如果都沒，才用預設值
+    function getAppData() {
+        const newData = localStorage.getItem('desktop_layout_ordered');
+        if (newData) return JSON.parse(newData);
+        
+        const oldData = localStorage.getItem('desktop_layout');
+        if (oldData) {
+            const parsed = JSON.parse(oldData);
+            // 轉換成流水排列
+            return parsed.sort((a, b) => a.slot - b.slot);
         }
+
+        return [
+            { id: 'chat', name: 'AI 助手', icon: '💬', color: '#4285f4', url: 'chat.html' },
+            { id: 'clock', name: '時鐘', icon: '⏰', color: '#ff9800', url: 'clock.html' },
+            { id: 'weather', name: '氣象', icon: '☁️', color: '#00bcd4', url: 'weather.html' },
+            { id: 'gallery', name: '相簿', icon: '🖼️', color: '#e91e63', url: 'gallery.html' },
+            { id: 'notes', name: '備忘錄', icon: '📝', color: '#4caf50', url: 'notes.html' },
+            { id: 'archive', name: '記憶倉庫', icon: '🏛️', color: '#673ab7', url: 'archive.html' },
+            { id: 'mail', name: '信箱', icon: '✉️', color: '#d44638', url: 'mail.html' }
+        ];
+    }
+
+    let appData = getAppData();
+    const homeScreen = document.getElementById('home-screen');
+    let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
+
+    // 重新整理與滾動鎖定
+    document.addEventListener('touchmove', (e) => {
+        if (window._activeClone) { if (e.cancelable) e.preventDefault(); }
     }, {passive: false});
+
+    function loadWallpaper() {
+        const saved = localStorage.getItem('active_wallpaper');
+        if(saved) document.body.style.backgroundImage = `url(${saved})`;
+    }
 
     function initDesktop() {
         homeScreen.innerHTML = '';
@@ -131,8 +99,7 @@
         });
         for (let i = appData.length; i < 24; i++) {
             const slot = document.createElement('div');
-            slot.className = 'grid-slot';
-            slot.dataset.index = i;
+            slot.className = 'grid-slot'; slot.dataset.index = i;
             homeScreen.appendChild(slot);
         }
     }
@@ -146,40 +113,32 @@
     }
 
     function setupDragging(el) {
-        let isDragging = false;
-        let lastTargetIdx = -1;
+        let isDragging = false, lastTargetIdx = -1;
 
         el.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             const rect = el.getBoundingClientRect();
-            // 💡 關鍵修復：紀錄手指相對於圖示「左上角」的偏移量
             offsetX = touch.clientX - rect.left;
             offsetY = touch.clientY - rect.top;
 
             dragTimeout = setTimeout(() => {
                 isDragging = true;
                 if (navigator.vibrate) navigator.vibrate(40);
-                
                 const clone = el.cloneNode(true);
                 clone.classList.add('dragging');
-                // 💡 初始位置補償：生成瞬間就對準手指
                 clone.style.left = (touch.clientX - offsetX) + 'px';
                 clone.style.top = (touch.clientY - offsetY) + 'px';
-                
                 document.body.appendChild(clone);
                 window._activeClone = clone;
                 el.classList.add('source-hidden');
-                
                 lastTargetIdx = appData.findIndex(a => a.id === el.dataset.id);
             }, 500);
         }, {passive: true});
 
         el.addEventListener('touchmove', (e) => {
             if (!isDragging) return clearTimeout(dragTimeout);
-            
             const touch = e.touches[0];
             if(window._activeClone) {
-                // 💡 持續扣除偏移量，保證圖示不會飄移
                 window._activeClone.style.left = (touch.clientX - offsetX) + 'px';
                 window._activeClone.style.top = (touch.clientY - offsetY) + 'px';
             }
@@ -187,7 +146,6 @@
             if (isReordering) return;
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
             const slot = target?.closest('.grid-slot');
-            
             if (slot) {
                 const targetIdx = parseInt(slot.dataset.index);
                 if (targetIdx !== -1 && targetIdx !== lastTargetIdx && targetIdx < appData.length) {
@@ -212,10 +170,10 @@
 
     function realTimeReflow(movingId, targetIdx) {
         const allIcons = document.querySelectorAll('.app-icon:not(.dragging)');
-        const firstPositions = {};
+        const firstPos = {};
         allIcons.forEach(icon => {
             const rect = icon.getBoundingClientRect();
-            firstPositions[icon.dataset.id] = { x: rect.left, y: rect.top };
+            firstPos[icon.dataset.id] = { x: rect.left, y: rect.top };
         });
 
         const movingItem = appData.find(a => a.id === movingId);
@@ -233,11 +191,11 @@
             allIcons.forEach(icon => {
                 const id = icon.dataset.id;
                 const rect = icon.getBoundingClientRect();
-                const deltaX = (firstPositions[id]?.x || 0) - rect.left;
-                const deltaY = (firstPositions[id]?.y || 0) - rect.top;
-                if (deltaX !== 0 || deltaY !== 0) {
+                const dx = (firstPos[id]?.x || 0) - rect.left;
+                const dy = (firstPos[id]?.y || 0) - rect.top;
+                if (dx !== 0 || dy !== 0) {
                     icon.style.transition = 'none';
-                    icon.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    icon.style.transform = `translate(${dx}px, ${dy}px)`;
                     icon.offsetWidth; 
                     icon.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
                     icon.style.transform = 'translate(0, 0)';
@@ -253,10 +211,7 @@
             now.getMinutes().toString().padStart(2, '0');
     }
 
-    window.onload = () => {
-        updateTime(); loadWallpaper(); initDesktop();
-        setInterval(updateTime, 1000);
-    };
+    window.onload = () => { updateTime(); loadWallpaper(); initDesktop(); setInterval(updateTime, 1000); };
     document.addEventListener('selectstart', (e) => e.preventDefault());
     window.oncontextmenu = (e) => e.preventDefault();
 </script>

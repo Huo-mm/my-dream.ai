@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Personal OS</title>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         :root { --bg: #222; }
         body { 
@@ -13,6 +14,7 @@
             background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
             background-size: cover;
             background-position: center;
+            background-repeat: no-repeat; /* 確保不重複 */
             transition: background-image 0.5s ease-in-out;
         }
 
@@ -30,6 +32,7 @@
 
         .app-icon {
             display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white;
+            cursor: grab; /* 提示可以抓取 */
         }
         .icon-box {
             width: 60px; height: 60px; border-radius: 14px;
@@ -38,6 +41,15 @@
             transition: transform 0.1s;
         }
         .icon-box:active { transform: scale(0.9); }
+
+        /* 2. 新增：拖移時的影子樣式與抖動動畫 */
+        .sortable-ghost { opacity: 0.3; }
+        @keyframes jiggle {
+            0% { transform: rotate(-1.5deg); }
+            50% { transform: rotate(1.5deg); }
+            100% { transform: rotate(-1.5deg); }
+        }
+        .editing .icon-box { animation: jiggle 0.3s infinite; }
 
         #dock {
             background: rgba(255,255,255,0.25); backdrop-filter: blur(15px);
@@ -87,7 +99,7 @@
     </a>
 
     <a href="mail.html" class="app-icon">
-    <div class="icon-box" style="background: #d44638;">✉️</div>
+        <div class="icon-box" style="background: #d44638;">✉️</div>
         <span style="font-size: 12px;">信箱</span>
     </a>
 </div>
@@ -112,6 +124,9 @@
         const savedWallpaper = localStorage.getItem('active_wallpaper');
         if(savedWallpaper) {
             document.body.style.backgroundImage = `url(${savedWallpaper})`;
+            // 3. 修改：確保設定桌布時是填滿狀態
+            document.body.style.backgroundSize = "cover";
+            document.body.style.backgroundPosition = "center";
         }
     }
 
@@ -127,7 +142,7 @@
                 alarm.active = false;
                 changed = true;
                 setTimeout(() => {
-                    alert(`⏰ 鬧鐘提醒：現在是 ${currentHM} 喵！`);
+                    alert(`⏰ 鬧鐘提醒：現在是 ${currentHM} ！`);
                 }, 100);
             }
         });
@@ -137,10 +152,29 @@
         }
     }
 
+    // 4. 新增：初始化拖移功能
+    function initDragAndDrop() {
+        const el = document.getElementById('home-screen');
+        new Sortable(el, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            delay: 500, // 長按 0.5 秒啟動
+            delayOnTouchOnly: true,
+            onStart: function() {
+                document.body.classList.add('editing');
+            },
+            onEnd: function() {
+                document.body.classList.remove('editing');
+                // 同步保存位置順序（可選功能，暫時先讓它能動）
+            }
+        });
+    }
+
     window.onload = function() {
         updateTime();
         loadWallpaper();
         checkAlarmsOnHome();
+        initDragAndDrop(); // 啟動拖移
         
         setInterval(updateTime, 1000);
         setInterval(checkAlarmsOnHome, 1000);

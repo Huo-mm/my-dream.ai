@@ -150,7 +150,13 @@
                 if (navigator.vibrate) navigator.vibrate(40);
 
                 const clone = el.cloneNode(true);
-                clone.classList.add('dragging');
+clone.classList.add('dragging');
+
+/* ✨ 確保 transform 基準一致 */
+clone.style.transformOrigin = 'top left';
+
+/* ✨ 防止某些手機瀏覽器殘留動畫 */
+clone.style.transition = 'none';
                 
                 // 💡 關鍵修正：在影子加入畫面之前就鎖定位置，防止「飛過來」的飄移感
                 clone.style.left = (touch.clientX - offsetX) + 'px';

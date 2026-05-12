@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>視覺自定義中心</title>
     <style>
+        :root { --color-a: #4285f4; --color-b: #1a2a6c; }
         body {
             margin: 0; background: #f4f4f9; font-family: -apple-system, sans-serif;
             padding: calc(env(safe-area-inset-top) + 20px) 20px env(safe-area-inset-bottom);
@@ -16,16 +17,13 @@
         .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .card-title { font-size: 16px; font-weight: bold; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
         
-        /* 雙色挑選器 */
         .dual-picker { display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px; }
         .picker-group { text-align: center; }
         input[type="color"] {
             -webkit-appearance: none; border: none; width: 70px; height: 70px; border-radius: 18px; cursor: pointer; background: none;
         }
         input[type="color"]::-webkit-color-swatch { border: 2px solid #eee; border-radius: 18px; }
-        .arrow { font-size: 20px; color: #ccc; }
 
-        /* 預覽區 */
         .preview-area {
             display: flex; gap: 15px; align-items: center; padding: 15px;
             background: #f0f0f0; border-radius: 15px; margin-bottom: 20px;
@@ -33,7 +31,6 @@
         #iconPreview { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
         #bgPreview { flex: 1; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
 
-        /* 按鈕組 */
         .control-group { display: flex; flex-direction: column; gap: 10px; }
         .btn {
             border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 600;
@@ -41,6 +38,31 @@
         }
         .btn-primary { background: #007aff; color: white; }
         .btn-danger { background: #ff3b30; color: white; margin-top: 10px; }
+
+        /* ✨ 自製彈窗樣式 */
+        #customModal {
+            display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background:white; width:80%; max-width:300px; border-radius:25px; 
+            overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .modal-header { padding:15px; text-align:center; color:white; font-weight:bold; font-size: 16px; }
+        .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; line-height: 1.4; }
+        .modal-footer { display:flex; border-top:1px solid #eee; }
+        .modal-btn {
+            flex:1; padding:15px; border:none; background:white; 
+            color:#007aff; font-weight:bold; font-size:16px; cursor:pointer;
+        }
+        .modal-btn:active { background: #f9f9f9; }
+
+        @keyframes popIn {
+            from { transform: scale(0.85); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -57,7 +79,7 @@
             <input type="color" id="colorA" value="#4285f4">
             <div style="font-size:12px; color:#888; margin-top:5px;">顏色 A</div>
         </div>
-        <div class="arrow">➡️</div>
+        <div style="font-size:20px; color:#ccc;">➡️</div>
         <div class="picker-group">
             <input type="color" id="colorB" value="#1a2a6c">
             <div style="font-size:12px; color:#888; margin-top:5px;">顏色 B</div>
@@ -85,13 +107,40 @@
     <button class="btn btn-danger" style="width: 100%;" onclick="resetAll()">強制重設所有視覺設定</button>
 </div>
 
+<div id="customModal">
+    <div class="modal-content">
+        <div id="modalHeader" class="modal-header">標題</div>
+        <div id="modalBody" class="modal-body">內容文字</div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal()">確定</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const pA = document.getElementById('colorA');
     const pB = document.getElementById('colorB');
     const iP = document.getElementById('iconPreview');
     const bP = document.getElementById('bgPreview');
 
-    // 即時預覽
+    // 💡 自製通知函數
+    function showNotify(title, message) {
+        const modal = document.getElementById('customModal');
+        const header = document.getElementById('modalHeader');
+        
+        // 讓彈窗標題也連動當前的調色盤顏色
+        header.style.background = `linear-gradient(135deg, ${pA.value}, ${pB.value})`;
+        
+        document.getElementById('modalTitle');
+        document.getElementById('modalHeader').innerText = title;
+        document.getElementById('modalBody').innerText = message;
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').style.display = 'none';
+    }
+
     function updatePreview() {
         const grad = `linear-gradient(135deg, ${pA.value}, ${pB.value})`;
         iP.style.background = grad;
@@ -101,45 +150,38 @@
     pA.addEventListener('input', updatePreview);
     pB.addEventListener('input', updatePreview);
 
-    // 1. 全配套用
     function applyToAll() {
         localStorage.setItem('theme_color_a', pA.value);
         localStorage.setItem('theme_color_b', pB.value);
-        localStorage.setItem('bg_style', 'gradient');
-        localStorage.removeItem('active_wallpaper');
-        alert('全套漸層已套用喵！✨');
-    }
-
-    // 2. 僅 App 圖示
-    function applyToIconsOnly() {
-        localStorage.setItem('theme_color_a', pA.value);
-        localStorage.setItem('theme_color_b', pB.value);
-        alert('App 圖示漸層已更新！');
-    }
-
-    // 3. 僅背景
-    function applyToBgOnly() {
-        // 使用一個獨立的 Key 來存背景色，不影響 App 的變數
         localStorage.setItem('bg_color_a', pA.value);
         localStorage.setItem('bg_color_b', pB.value);
         localStorage.setItem('bg_style', 'gradient');
         localStorage.removeItem('active_wallpaper');
-        alert('背景漸層已更新！');
+        showNotify('MINE OS 系統指令', '全套視覺漸層已完美配套喵！✨');
+    }
+
+    function applyToIconsOnly() {
+        localStorage.setItem('theme_color_a', pA.value);
+        localStorage.setItem('theme_color_b', pB.value);
+        showNotify('圖示自定義', 'App 圖示已更新為選定漸層色。');
+    }
+
+    function applyToBgOnly() {
+        localStorage.setItem('bg_color_a', pA.value);
+        localStorage.setItem('bg_color_b', pB.value);
+        localStorage.setItem('bg_style', 'gradient');
+        localStorage.removeItem('active_wallpaper');
+        showNotify('背景自定義', '背景漸層已獨立更新完成！');
     }
 
     function removeWallpaper() {
         localStorage.removeItem('active_wallpaper');
-        alert('桌布已移除。');
+        showNotify('桌布管理', '已移除圖片桌布，恢復為漸層背景。');
     }
 
     function resetAll() {
         if(confirm('確定要清除所有自定義顏色與桌布嗎？')) {
-            localStorage.removeItem('theme_color_a');
-            localStorage.removeItem('theme_color_b');
-            localStorage.removeItem('bg_color_a');
-            localStorage.removeItem('bg_color_b');
-            localStorage.removeItem('bg_style');
-            localStorage.removeItem('active_wallpaper');
+            localStorage.clear();
             location.reload();
         }
     }

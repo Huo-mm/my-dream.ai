@@ -24,14 +24,16 @@
         }
         .app-row:last-child { border-bottom: none; }
         .app-info { display: flex; align-items: center; gap: 12px; }
-        .app-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; }
+        .app-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; transition: 0.3s; }
         
         .picker-wrapper { 
-            position: relative; width: 42px; height: 42px; border-radius: 50%; 
+            position: relative; width: 44px; height: 44px; border-radius: 50%; 
             overflow: hidden; border: 3px solid #fff; box-shadow: 0 0 0 1px #ddd;
+            transition: transform 0.2s;
         }
+        .picker-wrapper:active { transform: scale(0.9); }
         input[type="color"] {
-            position: absolute; top: -5px; left: -5px; width: 60px; height: 60px; border: none; cursor: pointer; background: none;
+            position: absolute; top: -10px; left: -10px; width: 64px; height: 64px; border: none; cursor: pointer; background: none;
         }
 
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
@@ -53,10 +55,11 @@
             overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
             box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
-        .modal-header { padding:18px; text-align:center; color:white; font-weight:bold; font-size: 16px; }
+        .modal-header { padding:18px; text-align:center; color:white; font-weight:bold; font-size: 16px; transition: background 0.3s; }
         .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; line-height:1.5; }
         .modal-footer { display:flex; border-top:1px solid #eee; }
         .modal-btn { flex:1; padding:16px; border:none; background:white; color:#007aff; font-weight:bold; font-size:16px; cursor:pointer; }
+        .modal-btn:active { background: #f9f9f9; }
 
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
@@ -81,7 +84,7 @@
             <div style="font-size:11px; color:#888; margin-top:8px;">顏色 B</div>
         </div>
     </div>
-    <button class="btn btn-primary" onclick="syncAllToSystem()">一鍵同步所有 APP 為系統色</button>
+    <button class="btn btn-primary" id="syncBtn" onclick="syncAllToSystem()">一鍵同步所有 APP 為系統色</button>
 </div>
 
 <div class="card">
@@ -89,21 +92,21 @@
     
     <div class="app-row">
         <div class="app-info">
-            <div class="app-icon" style="background: #4285f4;">💬</div>
+            <div id="iconAI" class="app-icon" style="background: #4285f4;">💬</div>
             <div>
-                <div style="font-size:14px; font-weight:600;">AI 聊天室</div>
-                <div style="font-size:11px; color:#999;">影響對話氣泡與標題列</div>
+                <div style="font-size:14px; font-weight:600;">AI 助手</div>
+                <div style="font-size:11px; color:#999;">同步氣泡、標題列與按鈕</div>
             </div>
         </div>
-        <div class="picker-wrapper"><input type="color" id="colorChat" oninput="saveLive('app_chat_color_a', this.value)"></div>
+        <div class="picker-wrapper"><input type="color" id="colorChat" oninput="saveLive('app_ai_color_a', this.value)"></div>
     </div>
 
     <div class="app-row">
         <div class="app-info">
-            <div class="app-icon" style="background: #ff9800;">⏰</div>
+            <div id="iconClock" class="app-icon" style="background: #ff9800;">⏰</div>
             <div>
                 <div style="font-size:14px; font-weight:600;">時鐘 APP</div>
-                <div style="font-size:11px; color:#999;">影響鬧鐘清單與強調色</div>
+                <div style="font-size:11px; color:#999;">鬧鐘清單與數位時鐘強調色</div>
             </div>
         </div>
         <div class="picker-wrapper"><input type="color" id="colorClock" oninput="saveLive('app_clock_color_a', this.value)"></div>
@@ -111,10 +114,10 @@
 
     <div class="app-row">
         <div class="app-info">
-            <div class="app-icon" style="background: #673ab7;">📦</div>
+            <div id="iconArchive" class="app-icon" style="background: #673ab7;">📦</div>
             <div>
                 <div style="font-size:14px; font-weight:600;">記憶倉庫</div>
-                <div style="font-size:11px; color:#999;">影響列表與分類卡片</div>
+                <div style="font-size:11px; color:#999;">影響列表分類卡片顏色</div>
             </div>
         </div>
         <div class="picker-wrapper"><input type="color" id="colorArchive" oninput="saveLive('app_archive_color_a', this.value)"></div>
@@ -122,10 +125,10 @@
 
     <div class="app-row">
         <div class="app-info">
-            <div class="app-icon" style="background: #e91e63;">📖</div>
+            <div id="iconDiary" class="app-icon" style="background: #e91e63;">📖</div>
             <div>
                 <div style="font-size:14px; font-weight:600;">我的日記</div>
-                <div style="font-size:11px; color:#999;">影響日記頁面與字體裝飾</div>
+                <div style="font-size:11px; color:#999;">日記內頁與裝飾元素</div>
             </div>
         </div>
         <div class="picker-wrapper"><input type="color" id="colorDiary" oninput="saveLive('app_diary_color_a', this.value)"></div>
@@ -154,36 +157,56 @@
 </div>
 
 <script>
+    function updateLocalIcons() {
+        // 同步當前頁面上的圖示背景顏色以呈現即時預覽
+        document.getElementById('iconAI').style.background = document.getElementById('colorChat').value;
+        document.getElementById('iconClock').style.background = document.getElementById('colorClock').value;
+        document.getElementById('iconArchive').style.background = document.getElementById('colorArchive').value;
+        document.getElementById('iconDiary').style.background = document.getElementById('colorDiary').value;
+        
+        // 更新按鈕主題色
+        const primary = localStorage.getItem('theme_color_a') || '#007aff';
+        document.getElementById('syncBtn').style.background = primary;
+        document.documentElement.style.setProperty('--primary', primary);
+    }
+
     function saveLive(key, value) {
         localStorage.setItem(key, value);
-        // 如果是修改系統主色，自動更新彈窗色作為配套
+        
+        // 核心邏輯：如果修改系統主色，自動配套更新彈窗色
         if(key === 'theme_color_a') {
             localStorage.setItem('theme_modal_color', value);
             document.getElementById('colorModal').value = value;
         }
+        
+        updateLocalIcons();
     }
 
     function syncAllToSystem() {
         const colorA = document.getElementById('sysColorA').value;
-        const keys = ['app_chat_color_a', 'app_clock_color_a', 'app_archive_color_a', 'app_diary_color_a', 'theme_modal_color', 'chat_bubble_color'];
+        // 同步 AI 助手的 Key：app_ai_color_a
+        const keys = ['app_ai_color_a', 'app_clock_color_a', 'app_archive_color_a', 'app_diary_color_a', 'theme_modal_color', 'chat_bubble_color'];
         
         keys.forEach(key => localStorage.setItem(key, colorA));
         
-        // 更新當前頁面的 UI
+        // 更新當前頁面的 Input 數值
         document.getElementById('colorChat').value = colorA;
         document.getElementById('colorClock').value = colorA;
         document.getElementById('colorArchive').value = colorA;
         document.getElementById('colorDiary').value = colorA;
         document.getElementById('colorModal').value = colorA;
         
+        updateLocalIcons();
         showNotify('同步成功', '所有 APP 的色彩已統一！');
     }
 
     function showNotify(title, msg) {
         const modal = document.getElementById('customModal');
         const header = document.getElementById('modalHeader');
-        header.style.background = localStorage.getItem('theme_modal_color') || '#007aff';
-        document.getElementById('modalHeader').innerText = title;
+        const themeColor = localStorage.getItem('theme_modal_color') || '#007aff';
+        
+        header.style.background = themeColor;
+        header.innerText = title;
         document.getElementById('modalBody').innerText = msg;
         modal.style.display = 'flex';
     }
@@ -197,22 +220,25 @@
     }
 
     function resetFactory() {
-        if(confirm('確定要清除所有自定義顏色與桌布嗎？')) {
+        if(confirm('確定要清除所有自定義顏色與桌布嗎？此操作無法復原喵！')) {
             localStorage.clear();
             location.reload();
         }
     }
 
     window.onload = () => {
-        // 從 Storage 載入所有值
+        // 從 Storage 載入所有值，確保與 AI 助手等 APP 同步
         document.getElementById('sysColorA').value = localStorage.getItem('theme_color_a') || '#4285f4';
         document.getElementById('sysColorB').value = localStorage.getItem('theme_color_b') || '#1a2a6c';
         
-        document.getElementById('colorChat').value = localStorage.getItem('app_chat_color_a') || '#4285f4';
+        // 注意：這裡使用 app_ai_color_a 與助手連動
+        document.getElementById('colorChat').value = localStorage.getItem('app_ai_color_a') || '#4285f4';
         document.getElementById('colorClock').value = localStorage.getItem('app_clock_color_a') || '#ff9800';
         document.getElementById('colorArchive').value = localStorage.getItem('app_archive_color_a') || '#673ab7';
         document.getElementById('colorDiary').value = localStorage.getItem('app_diary_color_a') || '#e91e63';
         document.getElementById('colorModal').value = localStorage.getItem('theme_modal_color') || '#4285f4';
+        
+        updateLocalIcons();
     };
 </script>
 </body>

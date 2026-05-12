@@ -2,9 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <title>My Personal OS</title>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         :root { --bg: #222; }
         body { 
@@ -12,38 +11,37 @@
             font-family: -apple-system, sans-serif;
             height: 100dvh; display: flex; flex-direction: column;
             background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            transition: background-image 0.5s ease-in-out;
-            
-            /* 防止整個網頁被選取或彈出選單 */
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
+            background-size: cover; background-position: center;
+            overflow: hidden;
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
 
         #status-bar {
             padding: 10px 20px; display: flex; justify-content: space-between;
-            font-size: 14px; font-weight: bold;
-            background: rgba(0,0,0,0.1);
+            font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.1);
         }
 
+        /* 桌面核心：4x6 格線佈局 */
         #home-screen {
             flex: 1; display: grid; 
             grid-template-columns: repeat(4, 1fr); 
-            gap: 20px; padding: 30px; align-content: start;
+            grid-template-rows: repeat(6, 1fr); /* 4x6 框架 */
+            gap: 15px; padding: 20px;
+            position: relative;
+        }
+
+        /* 隱形的格位容器 */
+        .grid-slot {
+            width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            position: relative;
         }
 
         .app-icon {
-            display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white;
-            cursor: grab;
-            
-            /* --- 關鍵修改：禁用長按跳出瀏覽器選單 --- */
-            -webkit-touch-callout: none; /* 針對 iOS Safari */
-            -webkit-user-select: none;    /* 針對 Chrome/Safari */
-            user-select: none;           /* 標準屬性 */
-            -webkit-tap-highlight-color: transparent; /* 移除點擊時的藍色高亮 */
+            display: flex; flex-direction: column; align-items: center; 
+            text-decoration: none; color: white;
+            width: 70px; z-index: 10;
+            touch-action: none; /* 禁用預設觸摸行為以便拖拽 */
         }
         
         .icon-box {
@@ -51,17 +49,14 @@
             display: flex; justify-content: center; align-items: center;
             font-size: 30px; margin-bottom: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             transition: transform 0.1s;
-            pointer-events: auto; /* 確保圖示仍可點擊 */
         }
-        .icon-box:active { transform: scale(0.9); }
 
-        .sortable-ghost { opacity: 0.3; }
-        @keyframes jiggle {
-            0% { transform: rotate(-1.5deg); }
-            50% { transform: rotate(1.5deg); }
-            100% { transform: rotate(-1.5deg); }
+        /* 拖移時的樣式 */
+        .dragging {
+            opacity: 0.8; transform: scale(1.1);
+            position: fixed !important; z-index: 999;
+            pointer-events: none;
         }
-        .editing .icon-box { animation: jiggle 0.3s infinite; }
 
         #dock {
             background: rgba(255,255,255,0.25); backdrop-filter: blur(15px);
@@ -69,10 +64,7 @@
             margin: 20px; padding: 12px; border-radius: 28px;
             display: flex; justify-content: space-around; align-items: center;
         }
-        .dock-item { 
-            text-decoration: none; font-size: 26px; cursor: pointer;
-            -webkit-touch-callout: none;
-        }
+        .dock-item { text-decoration: none; font-size: 26px; }
     </style>
 </head>
 <body>
@@ -83,51 +75,129 @@
 </div>
 
 <div id="home-screen">
-    <a href="chat.html" class="app-icon">
-        <div class="icon-box" style="background: #4285f4;">💬</div>
-        <span style="font-size: 12px;">AI 助手</span>
-    </a>
-
-    <a href="clock.html" class="app-icon">
-        <div class="icon-box" style="background: #ff9800;">⏰</div>
-        <span style="font-size: 12px;">時鐘</span>
-    </a>
-
-    <a href="weather.html" class="app-icon">
-        <div class="icon-box" style="background: #00bcd4;">☁️</div>
-        <span style="font-size: 12px;">氣象</span>
-    </a>
-
-    <a href="gallery.html" class="app-icon">
-        <div class="icon-box" style="background: #e91e63;">🖼️</div>
-        <span style="font-size: 12px;">相簿</span>
-    </a>
-
-    <a href="notes.html" class="app-icon">
-        <div class="icon-box" style="background: #4caf50;">📝</div>
-        <span style="font-size: 12px;">備忘錄</span>
-    </a>
-
-    <a href="archive.html" class="app-icon">
-        <div class="icon-box" style="background: #673ab7;">🏛️</div>
-        <span style="font-size: 12px;">記憶倉庫</span>
-    </a>
-
-    <a href="mail.html" class="app-icon">
-        <div class="icon-box" style="background: #d44638;">✉️</div>
-        <span style="font-size: 12px;">信箱</span>
-    </a>
-</div>
+    </div>
 
 <div id="dock">
-    <a href="chat.html" class="dock-item" title="AI助手">💬</a>
-    <a href="notes.html" class="dock-item" title="備忘錄">📝</a>
-    <a href="gallery.html" class="dock-item" title="相簿">🖼️</a>
-    <a href="clock.html" class="dock-item" title="時鐘">⏰</a>
+    <a href="chat.html" class="dock-item">💬</a>
+    <a href="notes.html" class="dock-item">📝</a>
+    <a href="gallery.html" class="dock-item">🖼️</a>
+    <a href="clock.html" class="dock-item">⏰</a>
     <div onclick="location.reload()" class="dock-item">🏠</div>
 </div>
 
 <script>
+    // App 數據與其位置 (slotIndex 0-23)
+    let appData = JSON.parse(localStorage.getItem('desktop_layout')) || [
+        { id: 'chat', name: 'AI 助手', icon: '💬', color: '#4285f4', url: 'chat.html', slot: 0 },
+        { id: 'clock', name: '時鐘', icon: '⏰', color: '#ff9800', url: 'clock.html', slot: 1 },
+        { id: 'weather', name: '氣象', icon: '☁️', color: '#00bcd4', url: 'weather.html', slot: 2 },
+        { id: 'gallery', name: '相簿', icon: '🖼️', color: '#e91e63', url: 'gallery.html', slot: 3 },
+        { id: 'notes', name: '備忘錄', icon: '📝', color: '#4caf50', url: 'notes.html', slot: 4 },
+        { id: 'archive', name: '記憶倉庫', icon: '🏛️', color: '#673ab7', url: 'archive.html', slot: 5 },
+        { id: 'mail', name: '信箱', icon: '✉️', color: '#d44638', url: 'mail.html', slot: 6 }
+    ];
+
+    const homeScreen = document.getElementById('home-screen');
+
+    function initDesktop() {
+        homeScreen.innerHTML = '';
+        // 生成 24 個格位 (4欄 x 6列)
+        for (let i = 0; i < 24; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'grid-slot';
+            slot.dataset.index = i;
+            
+            // 檢查此格位是否有 App
+            const app = appData.find(a => a.slot === i);
+            if (app) {
+                const appEl = createAppElement(app);
+                slot.appendChild(appEl);
+            }
+            homeScreen.appendChild(slot);
+        }
+    }
+
+    function createAppElement(app) {
+        const a = document.createElement('a');
+        a.href = app.url;
+        a.className = 'app-icon';
+        a.dataset.id = app.id;
+        a.innerHTML = `
+            <div class="icon-box" style="background: ${app.color};">${app.icon}</div>
+            <span style="font-size: 12px;">${app.name}</span>
+        `;
+
+        // 綁定自定義拖拽邏輯
+        setupDragging(a);
+        return a;
+    }
+
+    function setupDragging(el) {
+        let isDragging = false;
+        let startX, startY;
+        let originalParent;
+
+        el.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+            
+            // 長按 500ms 開啟拖拽
+            dragTimeout = setTimeout(() => {
+                isDragging = true;
+                originalParent = el.parentElement;
+                el.classList.add('dragging');
+                document.body.appendChild(el);
+                moveAt(touch.clientX, touch.clientY);
+            }, 500);
+        }, {passive: true});
+
+        function moveAt(pageX, pageY) {
+            el.style.left = pageX - 35 + 'px';
+            el.style.top = pageY - 35 + 'px';
+        }
+
+        el.addEventListener('touchmove', (e) => {
+            if (!isDragging) {
+                clearTimeout(dragTimeout);
+                return;
+            }
+            const touch = e.touches[0];
+            moveAt(touch.clientX, touch.clientY);
+        });
+
+        el.addEventListener('touchend', (e) => {
+            clearTimeout(dragTimeout);
+            if (!isDragging) return;
+            isDragging = false;
+            el.classList.remove('dragging');
+            el.style.left = ''; el.style.top = '';
+
+            // 尋找放開位置下方的格位
+            const touch = e.changedTouches[0];
+            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+            const slot = dropTarget?.closest('.grid-slot');
+
+            if (slot) {
+                const targetIdx = parseInt(slot.dataset.index);
+                // 檢查目標位置是否已有 App
+                const existingApp = appData.find(a => a.slot === targetIdx);
+                const currentApp = appData.find(a => a.id === el.dataset.id);
+
+                if (!existingApp) {
+                    currentApp.slot = targetIdx;
+                } else {
+                    // 如果有 App，可以選擇交換位置
+                    existingApp.slot = currentApp.slot;
+                    currentApp.slot = targetIdx;
+                }
+                localStorage.setItem('desktop_layout', JSON.stringify(appData));
+            }
+            initDesktop(); // 重新渲染
+        });
+    }
+
+    // 更新時間等原有的系統功能...
     function updateTime() {
         const now = new Date();
         document.getElementById('live-time').innerText = 
@@ -139,71 +209,18 @@
         const savedWallpaper = localStorage.getItem('active_wallpaper');
         if(savedWallpaper) {
             document.body.style.backgroundImage = `url(${savedWallpaper})`;
-            document.body.style.backgroundSize = "cover";
-            document.body.style.backgroundPosition = "center";
         }
     }
-
-    function checkAlarmsOnHome() {
-        const alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
-        const now = new Date();
-        const currentHM = now.getHours().toString().padStart(2, '0') + ":" + 
-                          now.getMinutes().toString().padStart(2, '0');
-
-        let changed = false;
-        alarms.forEach(alarm => {
-            if (alarm.active && alarm.time === currentHM) {
-                alarm.active = false;
-                changed = true;
-                setTimeout(() => {
-                    alert(`⏰ 鬧鐘提醒：現在是 ${currentHM} ！`);
-                }, 100);
-            }
-        });
-
-        if (changed) {
-            localStorage.setItem('my_alarms', JSON.stringify(alarms));
-        }
-    }
-
-    function initDragAndDrop() {
-        const el = document.getElementById('home-screen');
-        new Sortable(el, {
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            delay: 500, 
-            delayOnTouchOnly: true,
-            onStart: function() {
-                document.body.classList.add('editing');
-            },
-            onEnd: function() {
-                document.body.classList.remove('editing');
-            }
-        });
-    }
-
-    // 禁用圖片長按儲存（針對某些瀏覽器）
-    window.oncontextmenu = function(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        return false;
-    };
 
     window.onload = function() {
         updateTime();
         loadWallpaper();
-        checkAlarmsOnHome();
-        initDragAndDrop();
-        
+        initDesktop();
         setInterval(updateTime, 1000);
-        setInterval(checkAlarmsOnHome, 1000);
     };
 
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'active_wallpaper') {
-            loadWallpaper();
-        }
-    });
+    // 禁止右鍵
+    window.oncontextmenu = (e) => e.preventDefault();
 </script>
 </body>
 </html>

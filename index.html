@@ -8,15 +8,18 @@
         :root { 
             --safe-top: env(safe-area-inset-top); 
             --safe-bottom: env(safe-area-inset-bottom);
-            --theme-color: #4285f4; 
+            /* ✨ 預設雙色漸層 (藍色系) */
+            --color-a: #4285f4; 
+            --color-b: #1a2a6c; 
         }
         
         html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: auto; background: #1a2a6c; }
         
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
-            background-color: var(--theme-color);
-            background-image: none; 
+            /* ✨ 背景改為雙色連動 */
+            background-color: var(--color-a);
+            background-image: linear-gradient(180deg, var(--color-a), var(--color-b));
             background-size: cover; background-position: center;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -39,12 +42,14 @@
         .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
         
+        /* ✨ App 圖示底色改為漸層 */
         .icon-box { 
             width: 55px; height: 55px; border-radius: 14px; 
             display: flex; justify-content: center; align-items: center; 
             font-size: 28px; margin-bottom: 4px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            background: var(--theme-color) !important; 
+            /* 135度斜向漸層，讓視覺更有層次 */
+            background: linear-gradient(135deg, var(--color-a), var(--color-b)) !important; 
         }
 
         .dragging { 
@@ -81,7 +86,6 @@
 </div>
 
 <script>
-    // 💡 強制注入新 App 的邏輯
     function getAppData() {
         const defaultApps = [
             { id: 'chat', name: 'AI 助手', icon: '💬', url: 'chat.html' },
@@ -95,13 +99,10 @@
         ];
 
         let currentData = localStorage.getItem('desktop_layout_ordered');
-        
         if (currentData) {
             let parsed = JSON.parse(currentData);
-            // ✨ 檢查是否缺少「settings」
             const hasSettings = parsed.some(app => app.id === 'settings');
             if (!hasSettings) {
-                // 如果缺了，強行把 settings 加進去並更新快取
                 parsed.push(defaultApps.find(a => a.id === 'settings'));
                 localStorage.setItem('desktop_layout_ordered', JSON.stringify(parsed));
                 return parsed;
@@ -115,27 +116,30 @@
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
+    // ✨ 應用雙色漸層與桌布邏輯
     function applyThemeAndWallpaper() {
-        const themeColor = localStorage.getItem('system_theme_color') || '#4285f4';
-        document.documentElement.style.setProperty('--theme-color', themeColor);
+        const colorA = localStorage.getItem('theme_color_a') || '#4285f4';
+        const colorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        
+        document.documentElement.style.setProperty('--color-a', colorA);
+        document.documentElement.style.setProperty('--color-b', colorB);
         
         const savedWallpaper = localStorage.getItem('active_wallpaper');
         const bgStyle = localStorage.getItem('bg_style') || 'gradient';
-        const solidColor = localStorage.getItem('solid_bg_color') || themeColor;
 
         if (savedWallpaper) {
             document.body.style.backgroundImage = `url(${savedWallpaper})`;
         } else {
             if (bgStyle === 'gradient') {
-                document.body.style.backgroundImage = `linear-gradient(180deg, ${solidColor}, #1a2a6c)`;
+                // 使用雙色自定義漸層背景
+                document.body.style.backgroundImage = `linear-gradient(180deg, ${colorA}, ${colorB})`;
             } else {
                 document.body.style.backgroundImage = 'none';
-                document.body.style.backgroundColor = solidColor;
+                document.body.style.backgroundColor = colorA;
             }
         }
     }
 
-    // 拖移與畫面初始化邏輯 (保持跟之前一樣的穩定版)
     document.addEventListener('touchmove', (e) => {
         if (window._activeClone) { if (e.cancelable) e.preventDefault(); }
     }, {passive: false});

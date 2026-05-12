@@ -3,28 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>系統設定</title>
+    <title>系統自定義</title>
     <style>
         body {
-            margin: 0; background: #f0f0f7; font-family: -apple-system, sans-serif;
-            padding: calc(env(safe-area-inset-top) + 20px) 20px;
+            margin: 0; background: #f4f4f9; font-family: -apple-system, sans-serif;
+            padding: calc(env(safe-area-inset-top) + 20px) 20px env(safe-area-inset-bottom);
+            color: #333;
         }
-        .header { display: flex; align-items: center; margin-bottom: 30px; }
+        .header { display: flex; align-items: center; margin-bottom: 25px; }
         .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; }
         
-        .section { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .section-title { font-size: 14px; color: #888; margin-bottom: 15px; font-weight: bold; }
+        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .card-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
         
-        .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-        .color-item { 
-            aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; cursor: pointer;
-            display: flex; justify-content: center; align-items: center; font-size: 12px;
+        /* 調色盤樣式 */
+        .color-picker-wrapper { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        input[type="color"] {
+            -webkit-appearance: none; border: none; width: 60px; height: 60px; border-radius: 50%; cursor: pointer; background: none;
         }
-        .color-item.active { border-color: #007aff; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.1); }
+
+        .control-group { display: flex; flex-direction: column; gap: 12px; }
+        .btn {
+            border: none; padding: 12px 18px; border-radius: 12px; font-size: 14px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s; background: #eee; color: #333;
+        }
+        .btn-primary { background: #007aff; color: white; }
+        .btn-outline { border: 2px solid #007aff; color: #007aff; background: transparent; }
         
-        .btn-reset {
-            width: 100%; padding: 15px; border-radius: 12px; border: none;
-            background: #ff3b30; color: white; font-size: 16px; font-weight: bold;
+        .preview-box {
+            width: 100%; height: 60px; border-radius: 12px; margin-top: 10px;
+            display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -32,50 +43,83 @@
 
 <div class="header">
     <a href="index.html" class="back-btn">⬅️</a>
-    <h1 style="font-size: 24px; margin: 0; color: #333;">系統設定</h1>
+    <h1 style="font-size: 22px; margin: 0;">視覺自定義</h1>
 </div>
 
-<div class="section">
-    <div class="section-title">一鍵配套主題色 (會覆蓋桌布)</div>
-    <div class="color-grid" id="themeGrid">
-        <div class="color-item" style="background: #4285f4;" data-color="#4285f4"></div>
-        <div class="color-item" style="background: #5ac8fa;" data-color="#5ac8fa"></div> <div class="color-item" style="background: #34c759;" data-color="#34c759"></div>
-        <div class="color-item" style="background: #5856d6;" data-color="#5856d6"></div>
-        <div class="color-item" style="background: #ff9500;" data-color="#ff9500"></div>
-        <div class="color-item" style="background: #8e8e93;" data-color="#8e8e93"></div> <div class="color-item" style="background: #1a1a1a;" data-color="#1a1a1a"></div> <div class="color-item" style="background: #d2b48c;" data-color="#d2b48c"></div> </div>
+<div class="card">
+    <div class="card-title">🎨 挑選你的專屬色</div>
+    <div class="color-picker-wrapper">
+        <input type="color" id="mainPicker" value="#4285f4">
+        <div>
+            <div id="colorHex" style="font-family: monospace; font-size: 18px;">#4285f4</div>
+            <div style="font-size: 12px; color: #888;">點擊圓圈開啟調色盤</div>
+        </div>
+    </div>
+    <div id="preview" class="preview-box" style="background: #4285f4;">預覽效果</div>
 </div>
 
-<div class="section">
-    <button class="btn-reset" onclick="resetEverything()">重設桌面佈局</button>
+<div class="card">
+    <div class="card-title">✨ 套用範圍</div>
+    <div class="control-group">
+        <button class="btn btn-primary" onclick="applyToAll()">一鍵全套配套 (含漸層背景)</button>
+        <button class="btn" onclick="applyToIconsOnly()">僅修改 App 圖示顏色</button>
+        <button class="btn" onclick="applyToBgOnly()">僅修改 背景 (純色)</button>
+        <button class="btn" onclick="applyGradientBg()">僅修改 背景 (配套漸層)</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">🖼️ 背景圖管理</div>
+    <button class="btn" style="width: 100%;" onclick="removeWallpaper()">移除當前桌布 (恢復主題色)</button>
 </div>
 
 <script>
-    const themeGrid = document.getElementById('themeGrid');
-    
-    themeGrid.addEventListener('click', (e) => {
-        const item = e.target.closest('.color-item');
-        if (!item) return;
+    const picker = document.getElementById('mainPicker');
+    const hexText = document.getElementById('colorHex');
+    const preview = document.getElementById('preview');
 
-        const selectedColor = item.dataset.color;
-
-        // 1. 儲存主題色
-        localStorage.setItem('system_theme_color', selectedColor);
-        
-        // 2. 強制移除桌布（達成你說的一鍵覆蓋效果）
-        localStorage.removeItem('active_wallpaper');
-
-        // 3. 視覺回饋
-        document.querySelectorAll('.color-item').forEach(el => el.classList.remove('active'));
-        item.classList.add('active');
-
-        alert('主題已配套！桌布已暫時移除喵。');
+    // 即時更新預覽
+    picker.addEventListener('input', (e) => {
+        const color = e.target.value;
+        hexText.innerText = color.toUpperCase();
+        preview.style.background = color;
     });
 
-    function resetEverything() {
-        if(confirm('確定要重設所有桌面設定嗎？')) {
-            localStorage.clear();
-            location.href = 'index.html';
-        }
+    // 取得配套漸層色 (稍微深一點的顏色)
+    function getGradient(color) {
+        return `linear-gradient(180deg, ${color}, #1a2a6c)`;
+    }
+
+    function applyToAll() {
+        const color = picker.value;
+        localStorage.setItem('system_theme_color', color);
+        localStorage.removeItem('active_wallpaper'); // 清除桌布
+        localStorage.setItem('bg_style', 'gradient'); // 標記為漸層
+        alert('已完成全套配套！');
+    }
+
+    function applyToIconsOnly() {
+        localStorage.setItem('system_theme_color', picker.value);
+        alert('App 圖示色已更新！');
+    }
+
+    function applyToBgOnly() {
+        localStorage.setItem('bg_style', 'solid');
+        localStorage.setItem('solid_bg_color', picker.value);
+        localStorage.removeItem('active_wallpaper');
+        alert('背景已更新為純色！');
+    }
+
+    function applyGradientBg() {
+        localStorage.setItem('bg_style', 'gradient');
+        localStorage.setItem('solid_bg_color', picker.value);
+        localStorage.removeItem('active_wallpaper');
+        alert('背景已更新為漸層！');
+    }
+
+    function removeWallpaper() {
+        localStorage.removeItem('active_wallpaper');
+        alert('桌布已移除，現在會顯示主題色。');
     }
 </script>
 </body>

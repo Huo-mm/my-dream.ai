@@ -2,37 +2,74 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>時鐘 APP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>MINE 時鐘</title>
     <style>
-        :root { --primary: #ff9800; --bg: #000; }
-        body { margin: 0; background: var(--bg); color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100dvh; text-align: center; }
-        .app-bar { padding: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #333; }
-        a { text-decoration: none; color: var(--primary); font-size: 16px; }
+        :root { 
+            --color-a: #ff9800; /* 預設橘色 */
+            --color-b: #e65100; 
+            --modal-header-bg: #ff9800;
+            --bg: #000; 
+        }
+        body { margin: 0; background: var(--bg); color: white; font-family: -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; height: 100dvh; text-align: center; }
         
-        #big-clock { font-size: 70px; font-weight: bold; margin-top: 40px; color: var(--primary); font-variant-numeric: tabular-nums; }
-        #date-info { font-size: 18px; color: #888; margin-bottom: 20px; }
+        /* AppBar 同步系統漸層 */
+        .app-bar { 
+            padding: calc(env(safe-area-inset-top) + 15px) 20px 15px 20px; 
+            display: flex; align-items: center; justify-content: space-between; 
+            background: linear-gradient(135deg, var(--color-a), var(--color-b));
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .back-btn { text-decoration: none; color: white; font-size: 16px; font-weight: bold; }
+        
+        #big-clock { font-size: 80px; font-weight: 200; margin-top: 50px; color: white; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
+        #date-info { font-size: 18px; color: #aaa; margin-bottom: 30px; }
 
         .alarm-list { flex: 1; padding: 20px; text-align: left; overflow-y: auto; }
         .alarm-item { 
-            background: #1c1c1e; padding: 15px; border-radius: 12px; margin-bottom: 10px; 
+            background: #1c1c1e; padding: 18px; border-radius: 16px; margin-bottom: 12px; 
             display: flex; justify-content: space-between; align-items: center;
+            border-left: 4px solid var(--color-a);
         }
-        .alarm-time { font-size: 28px; font-weight: 500; }
-        .delete-btn { background: #ff3b30; color: white; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+        .alarm-time { font-size: 32px; font-weight: 300; color: #fff; }
+        .delete-btn { background: #ff3b30; color: white; border: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
         
-        .add-area { padding: 20px; border-top: 1px solid #333; background: #000; }
-        .add-btn { background: var(--primary); color: white; border: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .add-area { padding: 30px 20px calc(20px + env(safe-area-inset-bottom)); border-top: 1px solid #222; background: #000; }
+        .add-btn { 
+            background: linear-gradient(135deg, var(--color-a), var(--color-b)); 
+            color: white; border: none; padding: 16px 50px; border-radius: 30px; 
+            font-weight: bold; cursor: pointer; font-size: 17px; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
         
-        /* 已響過的灰掉樣式 */
-        .expired { opacity: 0.5; }
+        .expired { opacity: 0.4; border-left: 4px solid #555; }
+
+        /* ✨ 自製彈窗樣式 (完全同步) */
+        #customModal {
+            display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center;
+            backdrop-filter: blur(8px);
+        }
+        .modal-content {
+            background:#1c1c1e; width:85%; max-width:320px; border-radius:25px; 
+            overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid #333;
+        }
+        .modal-header { padding:18px; text-align:center; color:white; font-weight:bold; font-size: 16px; background: var(--modal-header-bg); }
+        .modal-body { padding:25px 20px; text-align:center; color:#eee; font-size:15px; }
+        .modal-input { width: 90%; padding: 12px; margin-top: 10px; border: 1px solid #444; border-radius: 10px; outline: none; background: #2c2c2e; color: white; text-align: center; font-size: 20px; }
+        .modal-footer { display:flex; border-top:1px solid #333; }
+        .modal-btn { flex:1; padding:15px; border:none; background:transparent; color:#0a84ff; font-weight:bold; font-size:16px; cursor:pointer; }
+        .modal-btn:last-child { border-left: 1px solid #333; }
+        .modal-btn.danger { color: #ff453a; }
+
+        @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div class="app-bar">
-    <a href="index.html">❮ 桌面</a>
-    <span style="font-weight:bold">時鐘</span>
+    <a href="index.html" class="back-btn">❮ 桌面</a>
+    <span style="font-weight:bold; letter-spacing: 2px;">時鐘</span>
     <span style="width:40px"></span>
 </div>
 
@@ -40,22 +77,68 @@
 <div id="date-info">正在讀取日期...</div>
 
 <div class="alarm-list">
-    <h3 style="color: #888; font-size: 12px; letter-spacing: 1px;">鬧鐘清單</h3>
+    <h3 style="color: #666; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px;">Alarms</h3>
     <div id="list-container"></div>
 </div>
 
 <div class="add-area">
-    <button class="add-btn" onclick="addAlarm()">+ 新增鬧鐘</button>
+    <button class="add-btn" onclick="triggerAdd()">+ 新增鬧鐘</button>
+</div>
+
+<div id="customModal">
+    <div class="modal-content">
+        <div id="modalHeader" class="modal-header">標題</div>
+        <div id="modalBody" class="modal-body">內容文字</div>
+        <div id="inputArea" style="display:none; text-align:center; padding-bottom:20px;">
+            <input type="text" id="modalInput" class="modal-input" placeholder="例如: 0830">
+        </div>
+        <div class="modal-footer" id="modalFooter"></div>
+    </div>
 </div>
 
 <script>
-    let alarms = [];
+    let alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
 
-    // 初始化時先從讀取數據
-    try {
-        alarms = JSON.parse(localStorage.getItem('my_alarms') || "[]");
-    } catch(e) {
-        alarms = [];
+    function applyTheme() {
+        const colorA = localStorage.getItem('theme_color_a') || '#ff9800';
+        const colorB = localStorage.getItem('theme_color_b') || '#e65100';
+        const modalColor = localStorage.getItem('theme_modal_color') || colorA;
+
+        document.documentElement.style.setProperty('--color-a', colorA);
+        document.documentElement.style.setProperty('--color-b', colorB);
+        document.documentElement.style.setProperty('--modal-header-bg', modalColor);
+    }
+
+    // --- 萬用彈窗 ---
+    function mineDialog({ title, message, type = 'alert', onConfirm }) {
+        const modal = document.getElementById('customModal');
+        const inputArea = document.getElementById('inputArea');
+        const footer = document.getElementById('modalFooter');
+        
+        document.getElementById('modalHeader').innerText = title;
+        document.getElementById('modalBody').innerText = message;
+        inputArea.style.display = (type === 'prompt') ? 'block' : 'none';
+        
+        footer.innerHTML = '';
+        if (type === 'alert') {
+            footer.innerHTML = `<button class="modal-btn" onclick="closeModal()">確定</button>`;
+        } else if (type === 'prompt') {
+            footer.innerHTML = `
+                <button class="modal-btn" style="color:#aaa" onclick="closeModal()">取消</button>
+                <button class="modal-btn" id="saveBtn">設定</button>
+            `;
+            document.getElementById('saveBtn').onclick = () => {
+                const val = document.getElementById('modalInput').value;
+                if (val.trim()) { closeModal(); onConfirm(val); }
+            };
+        }
+        modal.style.display = 'flex';
+        if(type === 'prompt') document.getElementById('modalInput').focus();
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').style.display = 'none';
+        document.getElementById('modalInput').value = '';
     }
 
     function updateClock() {
@@ -76,9 +159,7 @@
             if (alarm.active && alarm.time === currentTime) {
                 alarm.active = false; 
                 hasChanges = true;
-                setTimeout(() => {
-                    alert(`⏰ 現在是 ${currentTime} ！`);
-                }, 100);
+                mineDialog({ title: '⏰ 鬧鐘響了', message: `現在是 ${currentTime} 喵！` });
             }
         });
 
@@ -88,26 +169,26 @@
         }
     }
 
-    function addAlarm() {
-        let userInput = prompt("設定時間 (例如 0830 或 08:30):", "");
-        if (!userInput) return;
+    function triggerAdd() {
+        mineDialog({
+            title: '設定新鬧鐘',
+            message: '請輸入時間 (如 0830 或 2215)',
+            type: 'prompt',
+            onConfirm: (val) => addAlarm(val)
+        });
+    }
 
-        // 移除冒號並去空白
+    function addAlarm(userInput) {
         userInput = userInput.replace(/:/g, "").trim(); 
-
         let h, m;
         if (userInput.length === 4) {
-            h = userInput.substring(0, 2);
-            m = userInput.substring(2, 4);
+            h = userInput.substring(0, 2); m = userInput.substring(2, 4);
         } else if (userInput.length === 3) {
-            h = userInput.substring(0, 1).padStart(2, '0');
-            m = userInput.substring(1, 3);
+            h = userInput.substring(0, 1).padStart(2, '0'); m = userInput.substring(1, 3);
         } else if (userInput.length <= 2 && userInput.length > 0) {
-            // 新增：如果只打 8，自動變成 08:00
-            h = userInput.padStart(2, '0');
-            m = "00";
+            h = userInput.padStart(2, '0'); m = "00";
         } else {
-            alert("格式有誤，請輸入數字（如 8 或 0830）。");
+            mineDialog({ title: '格式錯誤', message: '請輸入有效的時間格式。' });
             return;
         }
 
@@ -120,12 +201,11 @@
             saveAlarms();
             renderAlarms();
         } else {
-            alert("時間不符合，小時請在 23 以內，分鐘在 59 以內。");
+            mineDialog({ title: '數值超出', message: '小時要在 23 內，分鐘要在 59 內喔喵。' });
         }
     }
 
     function deleteAlarm(index) {
-        // 先排序鬧鐘，避免刪錯人
         alarms.sort((a, b) => a.time.localeCompare(b.time));
         alarms.splice(index, 1);
         saveAlarms();
@@ -139,19 +219,18 @@
     function renderAlarms() {
         const container = document.getElementById('list-container');
         if (alarms.length === 0) {
-            container.innerHTML = `<p style="color:#444; text-align:center; font-size:14px;">尚無設定鬧鐘</p>`;
+            container.innerHTML = `<p style="color:#444; text-align:center; font-size:14px; margin-top:30px;">尚無設定鬧鐘 💤</p>`;
             return;
         }
         
-        // 渲染前一定要先排好序，這樣 index 才是對的
         alarms.sort((a, b) => a.time.localeCompare(b.time));
 
         container.innerHTML = alarms.map((a, i) => `
             <div class="alarm-item ${a.active ? '' : 'expired'}">
                 <div class="alarm-time">${a.time}</div>
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <span style="font-size:11px; color:${a.active ? '#4cd964' : '#666'}">
-                        ${a.active ? '啟動中' : '已結束'}
+                    <span style="font-size:12px; font-weight:bold; color:${a.active ? 'var(--color-a)' : '#555'}">
+                        ${a.active ? 'ON' : 'OFF'}
                     </span>
                     <button class="delete-btn" onclick="deleteAlarm(${i})">刪除</button>
                 </div>
@@ -159,8 +238,11 @@
         `).join('');
     }
 
-    setInterval(updateClock, 1000);
-    renderAlarms();
+    window.onload = () => {
+        applyTheme();
+        setInterval(updateClock, 1000);
+        renderAlarms();
+    };
 </script>
 </body>
 </html>

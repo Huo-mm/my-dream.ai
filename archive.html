@@ -17,7 +17,7 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .archive-info h4 { margin: 0; color: #333; font-size: 16px; }
+        .archive-info h4 { margin: 0; color: #333; font-size: 16px; word-break: break-all; }
         .archive-info p { margin: 5px 0 0; color: #888; font-size: 12px; }
 
         /* 全螢幕展示層 */
@@ -34,8 +34,8 @@
             font-size: 14px; 
             max-width: 85%; 
             line-height: 1.5; 
-            word-break: break-all; /* 防止長網址撐破 */
-            white-space: pre-wrap;  /* 保留文字內的換行 */
+            word-break: break-all; 
+            white-space: pre-wrap; 
         }
         .user-b { align-self: flex-end; background: #4285f4; color: white; border-bottom-right-radius: 4px; }
         .ai-b { align-self: flex-start; background: white; color: #333; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
@@ -54,10 +54,11 @@
 
 <div id="detail-view">
     <div class="app-bar" style="background: #555;">
-        <span style="flex:1" id="detail-date">詳細紀錄</span>
+        <span style="flex:1" id="detail-title">詳細紀錄</span>
         <button onclick="closeDetail()" style="background:none; border:none; color:white; font-size: 16px; cursor:pointer;">關閉</button>
     </div>
     <div class="detail-content" id="detailContent"></div>
+    <div id="detail-footer-info" style="padding: 10px; text-align: center; font-size: 11px; color: #aaa;"></div>
     <button class="close-btn" onclick="deleteCurrent()">⚠️ 刪除此筆紀錄</button>
 </div>
 
@@ -74,7 +75,7 @@
         list.innerHTML = archives.map((item, i) => `
             <div class="archive-item" onclick="openDetail(${i})">
                 <div class="archive-info">
-                    <h4>對話紀錄備份</h4>
+                    <h4>${item.title || '未命名紀錄'}</h4>
                     <p>📅 ${item.date}</p>
                 </div>
                 <span style="color:#ccc">❯</span>
@@ -85,14 +86,17 @@
     function openDetail(i) {
         currentIdx = i;
         const item = archives[i];
-        document.getElementById('detail-date').innerText = item.date;
+        
+        // 標題顯示自訂標題，下方小字顯示日期
+        document.getElementById('detail-title').innerText = item.title || "詳細紀錄";
+        document.getElementById('detail-footer-info').innerText = `儲存時間：${item.date}`;
+        
         const contentBox = document.getElementById('detailContent');
         
         // 1. 先徹底濾掉包含在裡面的 <SEND_MAIL> 程式碼標籤
         let cleanContent = item.content.replace(/<SEND_MAIL>[\s\S]*?<\/SEND_MAIL>/g, '').trim();
 
-        // 2. 使用正規表達式切分「使用者:」或「助手:」，確保不會因為內容換行而斷掉
-        // 這個正則會尋找開頭是關鍵字的地方作為切分點
+        // 2. 使用正規表達式切分，確保換行不影響氣泡
         const parts = cleanContent.split(/(?=使用者:|助手:)/);
         
         contentBox.innerHTML = parts.map(part => {
@@ -106,7 +110,6 @@
                 const text = trimmedPart.replace('助手:', '').trim();
                 return `<div class="bubble ai-b">${text}</div>`;
             } else {
-                // 處理不符合格式的文字內容
                 return `<div style="font-size:12px; color:#999; text-align:center; margin:5px 0;">${trimmedPart}</div>`;
             }
         }).join('');

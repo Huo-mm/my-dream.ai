@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>視覺自定義中心</title>
     <style>
-        :root { --primary: #007aff; --bg: #f4f4f9; }
+        :root { --primary: #007aff; --bg: #f4f4f9; --modal-theme: #007aff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             margin: 0; background: var(--bg); font-family: -apple-system, sans-serif;
@@ -26,14 +26,15 @@
         .app-info { display: flex; align-items: center; gap: 12px; }
         .app-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; transition: 0.3s; }
         
+        /* ✨ 色票容器優化 */
         .picker-wrapper { 
-            position: relative; width: 44px; height: 44px; border-radius: 50%; 
-            overflow: hidden; border: 3px solid #fff; box-shadow: 0 0 0 1px #ddd;
-            transition: transform 0.2s;
+            position: relative; width: 42px; height: 42px; border-radius: 50%; 
+            border: 3px solid #fff; box-shadow: 0 0 0 1px #ddd;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background: #eee; /* 預設底色 */
         }
-        .picker-wrapper:active { transform: scale(0.9); }
         input[type="color"] {
-            position: absolute; top: -10px; left: -10px; width: 64px; height: 64px; border: none; cursor: pointer; background: none;
+            position: absolute; top: -10px; left: -10px; width: 64px; height: 64px; border: none; cursor: pointer; opacity: 0;
         }
 
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
@@ -44,6 +45,7 @@
         .btn-primary { background: var(--primary); color: white; grid-column: span 2; padding: 16px; font-size: 15px; }
         .btn-danger { background: #fff1f0; color: #ff3b30; grid-column: span 2; margin-top: 10px; }
 
+        /* ✨ 系統風格彈窗 */
         #customModal {
             display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
             background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;
@@ -53,10 +55,11 @@
             background:white; width:85%; max-width:320px; border-radius:28px; 
             overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
         }
-        .modal-header { padding:18px; text-align:center; color:white; font-weight:bold; }
+        .modal-header { padding:18px; text-align:center; color:white; font-weight:bold; background: var(--modal-theme); }
         .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; line-height:1.5; }
         .modal-footer { display:flex; border-top:1px solid #eee; }
-        .modal-btn { flex:1; padding:16px; border:none; background:white; color:#007aff; font-weight:bold; font-size:16px; }
+        .modal-btn { flex:1; padding:16px; border:none; background:white; color:var(--modal-theme); font-weight:bold; font-size:16px; cursor:pointer; }
+        .modal-btn:last-child { border-left: 1px solid #eee; }
 
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
@@ -72,191 +75,178 @@
     <div class="card-title">🌐 桌面圖示主題 (System)</div>
     <div style="display: flex; justify-content: space-around; align-items: center; background: #f9f9f9; padding: 20px; border-radius: 18px; margin-bottom: 15px;">
         <div style="text-align:center">
-            <div class="picker-wrapper"><input type="color" id="sysColorA" oninput="saveLive('theme_color_a', this.value)"></div>
+            <div class="picker-wrapper" id="pw-sysColorA"><input type="color" id="sysColorA" oninput="saveLive('theme_color_a', this.value)"></div>
             <div style="font-size:11px; color:#888; margin-top:8px;">圖示主色</div>
         </div>
         <div style="font-size:24px; color:#ddd;">➔</div>
         <div style="text-align:center">
-            <div class="picker-wrapper"><input type="color" id="sysColorB" oninput="saveLive('theme_color_b', this.value)"></div>
+            <div class="picker-wrapper" id="pw-sysColorB"><input type="color" id="sysColorB" oninput="saveLive('theme_color_b', this.value)"></div>
             <div style="font-size:11px; color:#888; margin-top:8px;">圖示漸層</div>
         </div>
     </div>
-    <button class="btn btn-primary" id="syncBtn" onclick="syncAllToSystem()">一鍵同步全系統為圖示主色</button>
+    <button class="btn btn-primary" id="syncBtn" onclick="confirmSync()">一鍵同步全系統為圖示主色</button>
 </div>
 
 <div class="card">
     <div class="card-title">📱 獨立 APP 選色</div>
-    
-    <div class="app-row">
-        <div class="app-info">
-            <div id="iconAI" class="app-icon" style="background: #4285f4;">💬</div>
-            <div><div style="font-size:14px; font-weight:600;">AI 助手</div></div>
-        </div>
-        <div class="picker-wrapper"><input type="color" id="colorChat" oninput="saveLive('app_ai_color_a', this.value)"></div>
-    </div>
+    <!-- APP 列表 -->
+    <div id="appPickerList"></div>
+</div>
 
+<div class="card">
+    <div class="card-title">🖼️ 桌面背景色</div>
     <div class="app-row">
-        <div class="app-info">
-            <div id="iconClock" class="app-icon" style="background: #ff9800;">⏰</div>
-            <div><div style="font-size:14px; font-weight:600;">時鐘</div></div>
-        </div>
-        <div class="picker-wrapper"><input type="color" id="colorClock" oninput="saveLive('app_clock_color_a', this.value)"></div>
+        <div style="font-size:14px; font-weight:600;">桌面背景 A (上)</div>
+        <div class="picker-wrapper" id="pw-bgColorA"><input type="color" id="bgColorA" oninput="saveLive('bg_color_a', this.value)"></div>
     </div>
-
     <div class="app-row">
-        <div class="app-info">
-            <div id="iconGallery" class="app-icon" style="background: #4caf50;">🖼️</div>
-            <div><div style="font-size:14px; font-weight:600;">相簿</div></div>
-        </div>
-        <div class="picker-wrapper"><input type="color" id="colorGallery" oninput="saveLive('app_gallery_color_a', this.value)"></div>
-    </div>
-
-    <div class="app-row">
-        <div class="app-info">
-            <div id="iconNotes" class="app-icon" style="background: #ffc107;">📝</div>
-            <div><div style="font-size:14px; font-weight:600;">備忘錄</div></div>
-        </div>
-        <div class="picker-wrapper"><input type="color" id="colorNotes" oninput="saveLive('app_notes_color_a', this.value)"></div>
-    </div>
-
-    <div class="app-row">
-        <div class="app-info">
-            <div id="iconWeather" class="app-icon" style="background: #03a9f4;">☁️</div>
-            <div><div style="font-size:14px; font-weight:600;">天氣</div></div>
-        </div>
-        <div class="picker-wrapper"><input type="color" id="colorWeather" oninput="saveLive('app_weather_color_a', this.value)"></div>
-    </div>
-
-    <div class="app-row">
-        <div class="app-info">
-            <div id="iconMail" class="app-icon" style="background: #f44336;">✉️</div>
-            <div><div style="font-size:14px; font-weight:600;">信箱</div></div>
-        </div>
-        <div class="picker-wrapper"><input type="color" id="colorMail" oninput="saveLive('app_mail_color_a', this.value)"></div>
-    </div>
-
-    <div class="app-row">
-        <div class="app-info">
-            <div id="iconArchive" class="app-icon" style="background: #673ab7;">📦</div>
-            <div><div style="font-size:14px; font-weight:600;">記憶倉庫</div></div>
-        </div>
-        <div class="picker-wrapper"><input type="color" id="colorArchive" oninput="saveLive('app_archive_color_a', this.value)"></div>
+        <div style="font-size:14px; font-weight:600;">桌面背景 B (下)</div>
+        <div class="picker-wrapper" id="pw-bgColorB"><input type="color" id="bgColorB" oninput="saveLive('bg_color_b', this.value)"></div>
     </div>
 </div>
 
 <div class="card">
-    <div class="card-title">🖼️ 背景與桌面</div>
+    <div class="card-title">🔔 系統彈窗設定</div>
     <div class="app-row">
-        <div style="font-size:14px; font-weight:600;">桌面背景色 A</div>
-        <div class="picker-wrapper"><input type="color" id="bgColorA" oninput="saveLive('bg_color_a', this.value)"></div>
-    </div>
-    <div class="app-row">
-        <div style="font-size:14px; font-weight:600;">桌面背景色 B</div>
-        <div class="picker-wrapper"><input type="color" id="bgColorB" oninput="saveLive('bg_color_b', this.value)"></div>
-    </div>
-    <div class="app-row">
-        <div style="font-size:14px; font-weight:500;">彈窗標題色</div>
-        <div class="picker-wrapper"><input type="color" id="colorModal" oninput="saveLive('theme_modal_color', this.value)"></div>
+        <div style="font-size:14px; font-weight:600;">通知彈窗主題色</div>
+        <div class="picker-wrapper" id="pw-colorModal"><input type="color" id="colorModal" oninput="saveLive('theme_modal_color', this.value)"></div>
     </div>
     <div class="btn-group" style="margin-top: 15px;">
         <button class="btn" onclick="clearWallpaper()">恢復漸層背景</button>
         <button class="btn" style="background:#007aff; color:white;" onclick="location.href='gallery.html'">更換桌布圖片</button>
-        <button class="btn btn-danger" onclick="resetFactory()">重設所有設定</button>
+        <button class="btn btn-danger" onclick="confirmReset()">重設所有設定</button>
     </div>
 </div>
 
+<!-- 系統通知彈窗 -->
 <div id="customModal">
     <div class="modal-content">
         <div id="modalHeader" class="modal-header">標題</div>
         <div id="modalBody" class="modal-body">內容文字</div>
-        <div class="modal-footer"><button class="modal-btn" onclick="closeModal()">確定</button></div>
+        <div class="modal-footer" id="modalFooter"></div>
     </div>
 </div>
 
 <script>
-    const appKeys = {
-        'AI': 'app_ai_color_a',
-        'Clock': 'app_clock_color_a',
-        'Gallery': 'app_gallery_color_a',
-        'Notes': 'app_notes_color_a',
-        'Weather': 'app_weather_color_a',
-        'Mail': 'app_mail_color_a',
-        'Archive': 'app_archive_color_a'
-    };
+    const apps = [
+        { id: 'AI', name: 'AI 助手', icon: '💬', key: 'app_ai_color_a' },
+        { id: 'Clock', name: '時鐘', icon: '⏰', key: 'app_clock_color_a' },
+        { id: 'Gallery', name: '相簿', icon: '🖼️', key: 'app_gallery_color_a' },
+        { id: 'Notes', name: '備忘錄', icon: '📝', key: 'app_notes_color_a' },
+        { id: 'Weather', name: '天氣', icon: '☁️', key: 'app_weather_color_a' },
+        { id: 'Mail', name: '信箱', icon: '✉️', key: 'app_mail_color_a' },
+        { id: 'Archive', name: '記憶倉庫', icon: '📦', key: 'app_archive_color_a' }
+    ];
 
-    function updateLocalIcons() {
-        // 即時預覽圖示顏色
-        Object.keys(appKeys).forEach(id => {
-            const val = document.getElementById('color' + id).value;
-            document.getElementById('icon' + id).style.background = val;
+    // 初始化 APP 列表介面
+    function initAppList() {
+        const container = document.getElementById('appPickerList');
+        container.innerHTML = apps.map(app => `
+            <div class="app-row">
+                <div class="app-info">
+                    <div id="icon${app.id}" class="app-icon">${app.icon}</div>
+                    <div style="font-size:14px; font-weight:600;">${app.name}</div>
+                </div>
+                <div class="picker-wrapper" id="pw-color${app.id}">
+                    <input type="color" id="color${app.id}" oninput="saveLive('${app.key}', this.value)">
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ✨ 核心：更新所有色票與圖示的視覺顯示
+    function refreshUI() {
+        const modalColor = localStorage.getItem('theme_modal_color') || '#007aff';
+        const primaryColor = localStorage.getItem('theme_color_a') || '#007aff';
+        
+        document.documentElement.style.setProperty('--primary', primaryColor);
+        document.documentElement.style.setProperty('--modal-theme', modalColor);
+
+        // 更新所有色票 Wrapper 的顏色
+        const allInputs = document.querySelectorAll('input[type="color"]');
+        allInputs.forEach(input => {
+            const wrapper = document.getElementById('pw-' + input.id);
+            if(wrapper) wrapper.style.backgroundColor = input.value;
+        });
+
+        // 更新 APP 圖示背景
+        apps.forEach(app => {
+            const val = document.getElementById('color' + app.id).value;
+            document.getElementById('icon' + app.id).style.background = val;
         });
         
-        const primary = localStorage.getItem('theme_color_a') || '#007aff';
-        document.getElementById('syncBtn').style.background = primary;
-        document.documentElement.style.setProperty('--primary', primary);
+        document.getElementById('syncBtn').style.background = primaryColor;
     }
 
     function saveLive(key, value) {
         localStorage.setItem(key, value);
-        if(key === 'theme_color_a') {
-            localStorage.setItem('theme_modal_color', value);
-            document.getElementById('colorModal').value = value;
-        }
-        updateLocalIcons();
+        refreshUI();
     }
 
-    function syncAllToSystem() {
-        const colorA = document.getElementById('sysColorA').value;
-        // 將所有 APP 與彈窗、背景 A 全部同步
-        const keysToSync = [...Object.values(appKeys), 'theme_modal_color', 'chat_bubble_color', 'bg_color_a'];
-        
-        keysToSync.forEach(key => localStorage.setItem(key, colorA));
-        
-        // 更新介面上的 Input 數值
-        Object.keys(appKeys).forEach(id => document.getElementById('color' + id).value = colorA);
-        document.getElementById('colorModal').value = colorA;
-        document.getElementById('bgColorA').value = colorA;
-        
-        updateLocalIcons();
-        showNotify('同步完成', '全系統色彩已統一喵！');
-    }
-
-    function showNotify(title, msg) {
+    // ✨ 系統彈窗
+    function showModal(title, msg, onConfirm = null) {
         const modal = document.getElementById('customModal');
-        const header = document.getElementById('modalHeader');
-        header.style.background = localStorage.getItem('theme_modal_color') || '#007aff';
-        header.innerText = title;
+        document.getElementById('modalHeader').innerText = title;
         document.getElementById('modalBody').innerText = msg;
+        const footer = document.getElementById('modalFooter');
+        
+        if (onConfirm) {
+            footer.innerHTML = `
+                <button class="modal-btn" style="color:#888" onclick="closeModal()">取消</button>
+                <button class="modal-btn" id="mConfirmBtn">確定</button>
+            `;
+            document.getElementById('mConfirmBtn').onclick = () => { onConfirm(); closeModal(); };
+        } else {
+            footer.innerHTML = `<button class="modal-btn" onclick="closeModal()">確定</button>`;
+        }
         modal.style.display = 'flex';
     }
 
     function closeModal() { document.getElementById('customModal').style.display = 'none'; }
 
+    function confirmSync() {
+        showModal("一鍵同步", "確定要將所有 APP 與背景色統一為主色調嗎喵？", () => {
+            const mainColor = document.getElementById('sysColorA').value;
+            apps.forEach(app => {
+                localStorage.setItem(app.key, mainColor);
+                document.getElementById('color' + app.id).value = mainColor;
+            });
+            localStorage.setItem('theme_modal_color', mainColor);
+            localStorage.setItem('bg_color_a', mainColor);
+            document.getElementById('colorModal').value = mainColor;
+            document.getElementById('bgColorA').value = mainColor;
+            refreshUI();
+        });
+    }
+
+    function confirmReset() {
+        showModal("重設系統", "確定要清除所有自定義顏色並恢復預設嗎？", () => {
+            localStorage.clear();
+            location.reload();
+        });
+    }
+
     function clearWallpaper() {
         localStorage.removeItem('active_wallpaper');
         localStorage.setItem('bg_style', 'gradient');
-        showNotify('背景更新', '已清除圖片桌布，恢復漸層。');
-    }
-
-    function resetFactory() {
-        if(confirm('確定要清除所有自定義顏色嗎？')) {
-            localStorage.clear();
-            location.reload();
-        }
+        showModal('背景更新', '已清除圖片桌布，恢復漸層。');
     }
 
     window.onload = () => {
+        initAppList();
+        
+        // 載入數值
         document.getElementById('sysColorA').value = localStorage.getItem('theme_color_a') || '#4285f4';
         document.getElementById('sysColorB').value = localStorage.getItem('theme_color_b') || '#1a2a6c';
-        
-        Object.keys(appKeys).forEach(id => {
-            document.getElementById('color' + id).value = localStorage.getItem(appKeys[id]) || '#888';
-        });
-
         document.getElementById('colorModal').value = localStorage.getItem('theme_modal_color') || '#4285f4';
         document.getElementById('bgColorA').value = localStorage.getItem('bg_color_a') || '#4285f4';
         document.getElementById('bgColorB').value = localStorage.getItem('bg_color_b') || '#1a2a6c';
-        updateLocalIcons();
+        
+        apps.forEach(app => {
+            document.getElementById('color' + app.id).value = localStorage.getItem(app.key) || '#888';
+        });
+
+        refreshUI();
     };
 </script>
 </body>

@@ -6,41 +6,34 @@
     <title>MINE Personal OS</title>
     <style>
         :root { 
-            --bg: #222;
-            /* 💡 處理裝置安全區域，避免被瀏海或 Home 條遮擋 */
             --safe-top: env(safe-area-inset-top);
             --safe-bottom: env(safe-area-inset-bottom);
         }
         
         body, html {
-            margin: 0; padding: 0;
-            height: 100%; width: 100%;
-            overflow: hidden; /* 徹底禁止捲動 */
-            position: fixed;
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            /* 💡 修改：不要在 body 鎖死 overflow，改用 js 攔截，讓下拉刷新有機會觸發 */
+            overflow-x: hidden;
+            background: #1a2a6c;
         }
 
         body { 
-            color: white; 
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            color: white; font-family: -apple-system, sans-serif;
             display: flex; flex-direction: column;
-            /* 💡 修正桌布：確保背景不隨視窗變動而位移 */
-            background: #1a2a6c;
             background-image: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
-            background-size: cover;
-            background-position: center center;
-            background-attachment: scroll;
+            background-size: cover; background-position: center;
+            /* 💡 防止長按選取文字 */
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
 
         #status-bar {
             padding: calc(var(--safe-top) + 5px) 20px 5px 20px;
-            display: flex; justify-content: space-between;
-            font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.1);
+            display: flex; justify-content: space-between; font-size: 14px;
         }
 
         #home-screen {
             flex: 1; display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            grid-template-rows: repeat(6, 1fr); 
+            grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); 
             gap: 10px; padding: 10px 20px;
             box-sizing: border-box;
         }
@@ -48,18 +41,18 @@
         .grid-slot {
             width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
+            /* 💡 輔助調試：可以暫時加背景色看格位 */
+            /* background: rgba(255,255,255,0.05); border-radius: 10px; */
         }
 
         .app-icon {
             display: flex; flex-direction: column; align-items: center; 
             text-decoration: none; color: white; width: 70px;
             touch-action: none;
-            transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.2s;
-            will-change: transform;
+            transition: opacity 0.2s, transform 0.2s;
         }
 
-        /* 💡 解決重複圖示：隱藏原本格位裡的圖示 */
-        .source-hidden { opacity: 0; pointer-events: none; }
+        .source-hidden { opacity: 0 !important; pointer-events: none; }
         
         .icon-box {
             width: 60px; height: 60px; border-radius: 14px;
@@ -70,8 +63,7 @@
         .dragging {
             opacity: 0.9; transform: scale(1.1) !important;
             position: fixed !important; z-index: 999;
-            pointer-events: none;
-            transition: none !important;
+            pointer-events: none; transition: none !important;
         }
 
         #dock {
@@ -79,7 +71,7 @@
             -webkit-backdrop-filter: blur(20px);
             margin: 10px 20px calc(var(--safe-bottom) + 15px) 20px;
             padding: 12px; border-radius: 30px;
-            display: flex; justify-content: space-around; align-items: center;
+            display: flex; justify-content: space-around;
         }
         .dock-item { text-decoration: none; font-size: 26px; }
     </style>
@@ -114,18 +106,14 @@
 
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout;
-    let isReordering = false;
 
     function loadWallpaper() {
         const savedWallpaper = localStorage.getItem('active_wallpaper');
-        if(savedWallpaper) {
-            document.body.style.backgroundImage = `url(${savedWallpaper})`;
-        }
+        if(savedWallpaper) document.body.style.backgroundImage = `url(${savedWallpaper})`;
     }
 
     function initDesktop() {
         homeScreen.innerHTML = '';
-        appData.sort((a, b) => a.slot - b.slot);
         for (let i = 0; i < 24; i++) {
             const slot = document.createElement('div');
             slot.className = 'grid-slot';
@@ -146,23 +134,22 @@
 
     function setupDragging(el) {
         let isDragging = false;
-        let lastTargetIdx = -1;
 
         el.addEventListener('touchstart', (e) => {
+            // 💡 只有在頁面頂端時才啟動拖拽計時，不影響下拉刷新
+            if (window.scrollY > 5) return;
+
             dragTimeout = setTimeout(() => {
                 isDragging = true;
                 if (navigator.vibrate) navigator.vibrate(40);
                 
-                // 💡 關鍵修復：長按成功後，先讓格位裡的原始圖示消失，避免重複
                 el.classList.add('source-hidden');
-                
-                // 複製一個「影子」來跟隨手指
                 const clone = el.cloneNode(true);
                 clone.classList.remove('source-hidden');
                 clone.classList.add('dragging');
                 document.body.appendChild(clone);
-                
                 window._activeClone = clone;
+                
                 const touch = e.touches[0];
                 updateClonePos(touch.clientX, touch.clientY);
             }, 500);
@@ -176,74 +163,45 @@
         }
 
         el.addEventListener('touchmove', (e) => {
-            if (!isDragging) return clearTimeout(dragTimeout);
+            if (!isDragging) {
+                clearTimeout(dragTimeout);
+                return; // 💡 讓位給原生的下拉刷新
+            }
+            // 💡 拖拽中完全禁止滾動與選取
+            if (e.cancelable) e.preventDefault();
             const touch = e.touches[0];
             updateClonePos(touch.clientX, touch.clientY);
-
-            if (isReordering) return;
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
-            const slot = target?.closest('.grid-slot');
-            
-            if (slot) {
-                const targetIdx = parseInt(slot.dataset.index);
-                if (targetIdx !== lastTargetIdx && targetIdx < appData.length) {
-                    lastTargetIdx = targetIdx;
-                    isReordering = true;
-                    realTimeReorder(el.dataset.id, targetIdx);
-                    setTimeout(() => { isReordering = false; }, 80); 
-                }
-            }
-            if (e.cancelable) e.preventDefault();
         }, {passive: false});
 
-        el.addEventListener('touchend', () => {
+        el.addEventListener('touchend', (e) => {
             clearTimeout(dragTimeout);
             if (!isDragging) return;
             isDragging = false;
+
+            const touch = e.changedTouches[0];
+            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+            const slot = dropTarget?.closest('.grid-slot');
+
+            if (slot) {
+                const targetIdx = parseInt(slot.dataset.index);
+                const movingId = el.dataset.id;
+                const movingApp = appData.find(a => a.id === movingId);
+
+                // 💡 自由落點邏輯：如果目標格位有人，就交換；無人就直接入住
+                const existingApp = appData.find(a => a.slot === targetIdx);
+                if (existingApp && existingApp.id !== movingId) {
+                    existingApp.slot = movingApp.slot;
+                }
+                movingApp.slot = targetIdx;
+                
+                localStorage.setItem('desktop_layout', JSON.stringify(appData));
+            }
+
             if(window._activeClone) {
                 window._activeClone.remove();
                 window._activeClone = null;
             }
-            localStorage.setItem('desktop_layout', JSON.stringify(appData));
             initDesktop(); 
-        });
-    }
-
-    function realTimeReorder(movingId, targetIdx) {
-        const allAppElements = document.querySelectorAll('.app-icon:not(.dragging)');
-        const firstPositions = {};
-        allAppElements.forEach(el => {
-            const rect = el.getBoundingClientRect();
-            firstPositions[el.dataset.id] = { x: rect.left, y: rect.top };
-        });
-
-        const movingApp = appData.find(a => a.id === movingId);
-        let others = appData.filter(a => a.id !== movingId).sort((a, b) => a.slot - b.slot);
-        others.splice(targetIdx, 0, movingApp);
-        others.forEach((app, index) => app.slot = index);
-        appData = others;
-
-        const slots = document.querySelectorAll('.grid-slot');
-        appData.forEach(app => {
-            const appEl = document.querySelector(`.app-icon[data-id="${app.id}"]`);
-            if (appEl) slots[app.slot].appendChild(appEl);
-        });
-
-        requestAnimationFrame(() => {
-            allAppElements.forEach(el => {
-                const id = el.dataset.id;
-                if (!firstPositions[id]) return;
-                const rect = el.getBoundingClientRect();
-                const deltaX = firstPositions[id].x - rect.left;
-                const deltaY = firstPositions[id].y - rect.top;
-                if (deltaX !== 0 || deltaY !== 0) {
-                    el.style.transition = 'none';
-                    el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-                    el.offsetWidth; 
-                    el.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
-                    el.style.transform = 'translate(0, 0)';
-                }
-            });
         });
     }
 
@@ -260,6 +218,9 @@
         initDesktop();
         setInterval(updateTime, 1000);
     };
+    
+    // 💡 禁止選取與右鍵選單
+    document.addEventListener('selectstart', (e) => e.preventDefault());
     window.oncontextmenu = (e) => e.preventDefault();
 </script>
 </body>

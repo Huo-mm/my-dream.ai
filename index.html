@@ -7,16 +7,18 @@
     <style>
         :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); }
         
-        /* 💡 恢復 auto 讓瀏覽器能偵測下拉動作 */
-        html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: auto; background: #1a2a6c; }
+        html, body { 
+            margin: 0; padding: 0; height: 100%; width: 100%; 
+            overflow: auto; /* 💡 保持 auto 讓瀏覽器可以偵測下拉刷新 */
+            background: #1a2a6c; 
+        }
         
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
             background-image: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
             background-size: cover; background-position: center;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-            /* 鎖定視窗範圍 */
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; /* 💡 確保內容不超出螢幕範圍 */
         }
 
         #status-bar {
@@ -33,32 +35,23 @@
         }
 
         .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        
         .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
-        
         .source-hidden { opacity: 0 !important; visibility: hidden; }
-        
         .icon-box { width: 55px; height: 55px; border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 28px; margin-bottom: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-        /* 💡 影子樣式優化：確保生成時沒有動畫，位置絕對精準 */
+        /* ✨ 外援推薦的終極影子樣式 */
         .dragging { 
-    opacity: 0.9 !important;
-
-    /* ✨ 修正漂移問題 */
-    transform: translateZ(0) scale(1.08) !important;
-    transform-origin: top left !important;
-
-    position: fixed !important;
-    left: 0;
-    top: 0;
-
-    z-index: 9999 !important;
-    pointer-events: none !important;
-    transition: none !important;
-    margin: 0 !important;
-
-    will-change: transform, left, top;
-}
+            opacity: 0.9 !important;
+            transform: translateZ(0) scale(1.08) !important;
+            transform-origin: top left !important;
+            position: fixed !important;
+            left: 0; top: 0;
+            z-index: 9999 !important;
+            pointer-events: none !important;
+            transition: none !important;
+            margin: 0 !important;
+            will-change: transform, left, top;
+        }
 
         #dock { background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); margin: 0 20px calc(var(--safe-bottom) + 15px) 20px; padding: 12px; border-radius: 30px; display: flex; justify-content: space-around; flex-shrink: 0; }
     </style>
@@ -104,7 +97,7 @@
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
-    // 💡 只有在「拖移進行中」才攔截滾動，這樣平常就能下拉重新整理
+    // 💡 僅在拖移中攔截滑動，確保下拉刷新可用
     document.addEventListener('touchmove', (e) => {
         if (window._activeClone) {
             if (e.cancelable) e.preventDefault();
@@ -141,10 +134,9 @@
         el.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             const rect = el.getBoundingClientRect();
-const width = rect.width;
-const height = rect.height;
+            const width = rect.width;
+            const height = rect.height;
 
-            // 💡 紀錄手指點擊處相對於圖示左上角的偏移
             offsetX = touch.clientX - rect.left;
             offsetY = touch.clientY - rect.top;
 
@@ -153,23 +145,14 @@ const height = rect.height;
                 if (navigator.vibrate) navigator.vibrate(40);
 
                 const clone = el.cloneNode(true);
-clone.classList.add('dragging');
+                clone.classList.add('dragging');
 
-/* ✨ 鎖定 clone 實際尺寸 */
-clone.style.width = width + 'px';
-clone.style.height = height + 'px';
-
-/* ✨ 鎖定位置基準 */
-clone.style.left = (touch.clientX - offsetX) + 'px';
-clone.style.top = (touch.clientY - offsetY) + 'px';
-
-clone.style.transformOrigin = 'top left';
-clone.style.transition = 'none';
-                
-                // 💡 關鍵修正：在影子加入畫面之前就鎖定位置，防止「飛過來」的飄移感
+                /* ✨ 鎖定尺寸與基礎位置 */
+                clone.style.width = width + 'px';
+                clone.style.height = height + 'px';
                 clone.style.left = (touch.clientX - offsetX) + 'px';
                 clone.style.top = (touch.clientY - offsetY) + 'px';
-                
+
                 document.body.appendChild(clone);
                 window._activeClone = clone;
                 el.classList.add('source-hidden');
@@ -182,7 +165,7 @@ clone.style.transition = 'none';
             const touch = e.touches[0];
             
             if(window._activeClone) {
-                // 💡 持續更新影子位置，扣除偏移量
+                // ✨ 使用外援推薦的位置更新邏輯
                 window._activeClone.style.left = (touch.clientX - offsetX) + 'px';
                 window._activeClone.style.top = (touch.clientY - offsetY) + 'px';
             }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>視覺自定義中心</title>
     <style>
-        :root { --color-a: #4285f4; --color-b: #1a2a6c; }
+        :root { --color-a: #4285f4; --color-b: #1a2a6c; --modal-color: #4285f4; }
         body {
             margin: 0; background: #f4f4f9; font-family: -apple-system, sans-serif;
             padding: calc(env(safe-area-inset-top) + 20px) 20px env(safe-area-inset-bottom);
@@ -15,21 +15,21 @@
         .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; }
         
         .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .card-title { font-size: 16px; font-weight: bold; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .card-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
         
         .dual-picker { display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px; }
         .picker-group { text-align: center; }
         input[type="color"] {
-            -webkit-appearance: none; border: none; width: 70px; height: 70px; border-radius: 18px; cursor: pointer; background: none;
+            -webkit-appearance: none; border: none; width: 60px; height: 60px; border-radius: 15px; cursor: pointer; background: none;
         }
-        input[type="color"]::-webkit-color-swatch { border: 2px solid #eee; border-radius: 18px; }
+        input[type="color"]::-webkit-color-swatch { border: 2px solid #eee; border-radius: 15px; }
 
         .preview-area {
-            display: flex; gap: 15px; align-items: center; padding: 15px;
-            background: #f0f0f0; border-radius: 15px; margin-bottom: 20px;
+            display: flex; gap: 10px; align-items: center; padding: 12px;
+            background: #f0f0f0; border-radius: 15px; margin-bottom: 15px;
         }
-        #iconPreview { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-        #bgPreview { flex: 1; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
+        #iconPreview { width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        #bgPreview { flex: 1; height: 45px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; }
 
         .control-group { display: flex; flex-direction: column; gap: 10px; }
         .btn {
@@ -37,12 +37,13 @@
             cursor: pointer; transition: 0.2s; background: #eee; color: #333;
         }
         .btn-primary { background: #007aff; color: white; }
+        .btn-save { background: #34c759; color: white; padding: 8px 15px; border-radius: 8px; font-size: 12px; }
         .btn-danger { background: #ff3b30; color: white; margin-top: 10px; }
 
         /* ✨ 自製彈窗樣式 */
         #customModal {
             display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
-            background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;
+            background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;
             backdrop-filter: blur(5px);
         }
         .modal-content {
@@ -57,7 +58,6 @@
             flex:1; padding:15px; border:none; background:white; 
             color:#007aff; font-weight:bold; font-size:16px; cursor:pointer;
         }
-        .modal-btn:active { background: #f9f9f9; }
 
         @keyframes popIn {
             from { transform: scale(0.85); opacity: 0; }
@@ -73,38 +73,55 @@
 </div>
 
 <div class="card">
-    <div class="card-title">🎨 調配漸層色彩</div>
+    <div class="card-title">🎨 系統漸層色彩</div>
     <div class="dual-picker">
         <div class="picker-group">
             <input type="color" id="colorA" value="#4285f4">
-            <div style="font-size:12px; color:#888; margin-top:5px;">顏色 A</div>
+            <div style="font-size:11px; color:#888; margin-top:5px;">顏色 A</div>
         </div>
         <div style="font-size:20px; color:#ccc;">➡️</div>
         <div class="picker-group">
             <input type="color" id="colorB" value="#1a2a6c">
-            <div style="font-size:12px; color:#888; margin-top:5px;">顏色 B</div>
+            <div style="font-size:11px; color:#888; margin-top:5px;">顏色 B</div>
         </div>
     </div>
-    
-    <div style="font-size:12px; color:#888; margin-bottom:8px;">預覽效果：</div>
     <div class="preview-area">
         <div id="iconPreview">📱</div>
-        <div id="bgPreview">背景漸層</div>
+        <div id="bgPreview">系統預覽</div>
+    </div>
+    <div class="control-group">
+        <button class="btn btn-primary" onclick="applyToAll()">一鍵套用全系統漸層</button>
     </div>
 </div>
 
 <div class="card">
-    <div class="card-title">✨ 選擇套用範圍</div>
-    <div class="control-group">
-        <button class="btn btn-primary" onclick="applyToAll()">一鍵全配套用 (App + 背景)</button>
-        <button class="btn" onclick="applyToIconsOnly()">僅修改 App 圖示漸層</button>
-        <button class="btn" onclick="applyToBgOnly()">僅修改 背景漸層</button>
-        <button class="btn" onclick="removeWallpaper()">移除桌布 (恢復背景漸層)</button>
+    <div class="card-title">✨ 獨立細節選色</div>
+    
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="color" id="modalColor" value="#4285f4" style="width:45px; height:45px;">
+            <div style="font-size:14px; font-weight:500;">彈窗標題色</div>
+        </div>
+        <button class="btn-save" onclick="saveModalColor()">儲存標題色</button>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="color" id="bubbleColor" value="#4285f4" style="width:45px; height:45px;">
+            <div style="font-size:14px; font-weight:500;">對話氣泡色</div>
+        </div>
+        <button class="btn-save" onclick="saveBubbleColor()">儲存氣泡色</button>
     </div>
 </div>
 
-<div class="card" style="background: transparent; box-shadow: none; padding: 0;">
-    <button class="btn btn-danger" style="width: 100%;" onclick="resetAll()">強制重設所有視覺設定</button>
+<div class="card">
+    <div class="card-title">⚙️ 更多選項</div>
+    <div class="control-group">
+        <button class="btn" onclick="applyToIconsOnly()">僅修改 App 圖示</button>
+        <button class="btn" onclick="applyToBgOnly()">僅修改 背景漸層</button>
+        <button class="btn" onclick="removeWallpaper()">移除桌布圖片</button>
+        <button class="btn btn-danger" onclick="resetAll()">強制重設所有設定</button>
+    </div>
 </div>
 
 <div id="customModal">
@@ -120,6 +137,8 @@
 <script>
     const pA = document.getElementById('colorA');
     const pB = document.getElementById('colorB');
+    const pModal = document.getElementById('modalColor');
+    const pBubble = document.getElementById('bubbleColor');
     const iP = document.getElementById('iconPreview');
     const bP = document.getElementById('bgPreview');
 
@@ -128,10 +147,10 @@
         const modal = document.getElementById('customModal');
         const header = document.getElementById('modalHeader');
         
-        // 讓彈窗標題也連動當前的調色盤顏色
-        header.style.background = `linear-gradient(135deg, ${pA.value}, ${pB.value})`;
+        // 抓取獨立的彈窗標題顏色
+        const customModalColor = localStorage.getItem('theme_modal_color') || pA.value;
+        header.style.background = customModalColor;
         
-        document.getElementById('modalTitle');
         document.getElementById('modalHeader').innerText = title;
         document.getElementById('modalBody').innerText = message;
         modal.style.display = 'flex';
@@ -157,13 +176,23 @@
         localStorage.setItem('bg_color_b', pB.value);
         localStorage.setItem('bg_style', 'gradient');
         localStorage.removeItem('active_wallpaper');
-        showNotify('MINE OS 系統指令', '全套視覺漸層已完美配套喵！✨');
+        showNotify('系統指令', '漸層配色已全面套用喵！✨');
+    }
+
+    function saveModalColor() {
+        localStorage.setItem('theme_modal_color', pModal.value);
+        showNotify('視覺中心', '彈窗標題顏色已獨立更新！');
+    }
+
+    function saveBubbleColor() {
+        localStorage.setItem('chat_bubble_color', pBubble.value);
+        showNotify('視覺中心', '對話氣泡顏色已獨立更新！');
     }
 
     function applyToIconsOnly() {
         localStorage.setItem('theme_color_a', pA.value);
         localStorage.setItem('theme_color_b', pB.value);
-        showNotify('圖示自定義', 'App 圖示已更新為選定漸層色。');
+        showNotify('圖示更新', 'App 圖示漸層已更新。');
     }
 
     function applyToBgOnly() {
@@ -171,16 +200,16 @@
         localStorage.setItem('bg_color_b', pB.value);
         localStorage.setItem('bg_style', 'gradient');
         localStorage.removeItem('active_wallpaper');
-        showNotify('背景自定義', '背景漸層已獨立更新完成！');
+        showNotify('背景更新', '背景漸層已獨立套用。');
     }
 
     function removeWallpaper() {
         localStorage.removeItem('active_wallpaper');
-        showNotify('桌布管理', '已移除圖片桌布，恢復為漸層背景。');
+        showNotify('桌布管理', '已恢復為漸層背景。');
     }
 
     function resetAll() {
-        if(confirm('確定要清除所有自定義顏色與桌布嗎？')) {
+        if(confirm('確定要清除所有自定義設定嗎？')) {
             localStorage.clear();
             location.reload();
         }
@@ -189,6 +218,8 @@
     window.onload = () => {
         pA.value = localStorage.getItem('theme_color_a') || '#4285f4';
         pB.value = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        pModal.value = localStorage.getItem('theme_modal_color') || pA.value;
+        pBubble.value = localStorage.getItem('chat_bubble_color') || pA.value;
         updatePreview();
     };
 </script>

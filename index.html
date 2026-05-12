@@ -12,8 +12,8 @@
         
         body, html {
             margin: 0; padding: 0; height: 100%; width: 100%;
-            /* 💡 修改：不要在 body 鎖死 overflow，改用 js 攔截，讓下拉刷新有機會觸發 */
-            overflow-x: hidden;
+            /* 💡 讓重新整理生效，但禁止手指亂滑導致的位移 */
+            overflow-y: auto; overflow-x: hidden;
             background: #1a2a6c;
         }
 
@@ -22,34 +22,37 @@
             display: flex; flex-direction: column;
             background-image: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
             background-size: cover; background-position: center;
-            /* 💡 防止長按選取文字 */
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
 
+        /* 💡 恢復半透明底的狀態欄 */
         #status-bar {
-            padding: calc(var(--safe-top) + 5px) 20px 5px 20px;
+            padding: calc(var(--safe-top) + 5px) 20px 10px 20px;
             display: flex; justify-content: space-between; font-size: 14px;
+            background: rgba(0, 0, 0, 0.25); /* 這裡加回半透明底 */
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            position: sticky; top: 0; z-index: 1000;
         }
 
         #home-screen {
             flex: 1; display: grid; 
             grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); 
-            gap: 10px; padding: 10px 20px;
+            gap: 10px; padding: 15px 20px;
             box-sizing: border-box;
+            min-height: 80vh; /* 確保內容足夠長以觸發下拉刷新 */
         }
 
         .grid-slot {
             width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
-            /* 💡 輔助調試：可以暫時加背景色看格位 */
-            /* background: rgba(255,255,255,0.05); border-radius: 10px; */
         }
 
         .app-icon {
             display: flex; flex-direction: column; align-items: center; 
             text-decoration: none; color: white; width: 70px;
             touch-action: none;
-            transition: opacity 0.2s, transform 0.2s;
+            transition: transform 0.35s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.2s;
+            will-change: transform;
         }
 
         .source-hidden { opacity: 0 !important; pointer-events: none; }
@@ -62,7 +65,7 @@
 
         .dragging {
             opacity: 0.9; transform: scale(1.1) !important;
-            position: fixed !important; z-index: 999;
+            position: fixed !important; z-index: 9999;
             pointer-events: none; transition: none !important;
         }
 
@@ -76,7 +79,7 @@
         .dock-item { text-decoration: none; font-size: 26px; }
     </style>
 </head>
-<body>
+<body onscroll="handleScroll(event)">
 
 <div id="status-bar">
     <span id="live-time">00:00</span>
@@ -106,6 +109,13 @@
 
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout;
+    let isReordering = false;
+
+    // 💡 禁止非必要的滑動（鎖定畫面，但保留下拉刷新）
+    function handleScroll(e) {
+        if (window.scrollY < 0) return; // 允許下拉刷新
+        if (window.scrollY > 0) window.scrollTo(0, 0); // 鎖定不准往上捲
+    }
 
     function loadWallpaper() {
         const savedWallpaper = localStorage.getItem('active_wallpaper');
@@ -134,75 +144,93 @@
 
     function setupDragging(el) {
         let isDragging = false;
+        let lastTargetIdx = -1;
 
         el.addEventListener('touchstart', (e) => {
-            // 💡 只有在頁面頂端時才啟動拖拽計時，不影響下拉刷新
             if (window.scrollY > 5) return;
-
             dragTimeout = setTimeout(() => {
                 isDragging = true;
                 if (navigator.vibrate) navigator.vibrate(40);
-                
                 el.classList.add('source-hidden');
                 const clone = el.cloneNode(true);
                 clone.classList.remove('source-hidden');
                 clone.classList.add('dragging');
                 document.body.appendChild(clone);
                 window._activeClone = clone;
-                
-                const touch = e.touches[0];
-                updateClonePos(touch.clientX, touch.clientY);
+                updateClonePos(e.touches[0].clientX, e.touches[0].clientY);
             }, 500);
         }, {passive: true});
 
-        function updateClonePos(x, y) {
-            if(window._activeClone) {
-                window._activeClone.style.left = x - 35 + 'px';
-                window._activeClone.style.top = y - 35 + 'px';
-            }
-        }
-
         el.addEventListener('touchmove', (e) => {
-            if (!isDragging) {
-                clearTimeout(dragTimeout);
-                return; // 💡 讓位給原生的下拉刷新
-            }
-            // 💡 拖拽中完全禁止滾動與選取
+            if (!isDragging) return clearTimeout(dragTimeout);
             if (e.cancelable) e.preventDefault();
             const touch = e.touches[0];
             updateClonePos(touch.clientX, touch.clientY);
+
+            if (isReordering) return;
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            const slot = target?.closest('.grid-slot');
+            
+            if (slot) {
+                const targetIdx = parseInt(slot.dataset.index);
+                if (targetIdx !== lastTargetIdx) {
+                    lastTargetIdx = targetIdx;
+                    isReordering = true;
+                    realTimeSwap(el.dataset.id, targetIdx); // 💡 使用「即時交換」邏輯
+                    setTimeout(() => { isReordering = false; }, 100); 
+                }
+            }
         }, {passive: false});
 
-        el.addEventListener('touchend', (e) => {
+        el.addEventListener('touchend', () => {
             clearTimeout(dragTimeout);
             if (!isDragging) return;
             isDragging = false;
-
-            const touch = e.changedTouches[0];
-            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-            const slot = dropTarget?.closest('.grid-slot');
-
-            if (slot) {
-                const targetIdx = parseInt(slot.dataset.index);
-                const movingId = el.dataset.id;
-                const movingApp = appData.find(a => a.id === movingId);
-
-                // 💡 自由落點邏輯：如果目標格位有人，就交換；無人就直接入住
-                const existingApp = appData.find(a => a.slot === targetIdx);
-                if (existingApp && existingApp.id !== movingId) {
-                    existingApp.slot = movingApp.slot;
-                }
-                movingApp.slot = targetIdx;
-                
-                localStorage.setItem('desktop_layout', JSON.stringify(appData));
-            }
-
-            if(window._activeClone) {
-                window._activeClone.remove();
-                window._activeClone = null;
-            }
+            if(window._activeClone) window._activeClone.remove();
+            localStorage.setItem('desktop_layout', JSON.stringify(appData));
             initDesktop(); 
         });
+    }
+
+    function updateClonePos(x, y) {
+        if(window._activeClone) {
+            window._activeClone.style.left = x - 35 + 'px';
+            window._activeClone.style.top = y - 35 + 'px';
+        }
+    }
+
+    // 💡 自由位移中的「流動閃避」：路過就交換，不影響其他 App 的座標
+    function realTimeSwap(movingId, targetIdx) {
+        const movingApp = appData.find(a => a.id === movingId);
+        const existingApp = appData.find(a => a.slot === targetIdx);
+        
+        if (existingApp && existingApp.id !== movingId) {
+            // FLIP 動畫記錄
+            const targetEl = document.querySelector(`.app-icon[data-id="${existingApp.id}"]`);
+            const rect = targetEl.getBoundingClientRect();
+            
+            // 交換座標
+            const oldSlot = movingApp.slot;
+            existingApp.slot = oldSlot;
+            movingApp.slot = targetIdx;
+
+            // 執行平移動畫
+            const slots = document.querySelectorAll('.grid-slot');
+            slots[oldSlot].appendChild(targetEl);
+            
+            const newRect = targetEl.getBoundingClientRect();
+            const deltaX = rect.left - newRect.left;
+            const deltaY = rect.top - newRect.top;
+
+            targetEl.style.transition = 'none';
+            targetEl.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            targetEl.offsetWidth; 
+            targetEl.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
+            targetEl.style.transform = 'translate(0, 0)';
+        } else {
+            // 純移動到空位
+            movingApp.slot = targetIdx;
+        }
     }
 
     function updateTime() {
@@ -213,13 +241,9 @@
     }
 
     window.onload = () => {
-        updateTime();
-        loadWallpaper();
-        initDesktop();
+        updateTime(); loadWallpaper(); initDesktop();
         setInterval(updateTime, 1000);
     };
-    
-    // 💡 禁止選取與右鍵選單
     document.addEventListener('selectstart', (e) => e.preventDefault());
     window.oncontextmenu = (e) => e.preventDefault();
 </script>

@@ -5,22 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <title>MINE Personal OS</title>
     <style>
-        :root { --bg: #222; }
+        :root { 
+            --bg: #222;
+            /* 💡 處理裝置安全區域，避免被瀏海或 Home 條遮擋 */
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+        
+        body, html {
+            margin: 0; padding: 0;
+            height: 100%; width: 100%;
+            overflow: hidden; /* 徹底禁止捲動 */
+            position: fixed;
+        }
+
         body { 
-            margin: 0; color: white; 
-            font-family: -apple-system, sans-serif;
-            height: 100dvh; width: 100vw;
+            color: white; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             display: flex; flex-direction: column;
-            background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
-            background-size: cover; background-position: center;
-            /* 💡 徹底鎖定畫面，禁止滾動 */
-            overflow: hidden;
-            position: fixed; 
-            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+            /* 💡 修正桌布：確保背景不隨視窗變動而位移 */
+            background: #1a2a6c;
+            background-image: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
+            background-size: cover;
+            background-position: center center;
+            background-attachment: scroll;
         }
 
         #status-bar {
-            padding: 10px 20px; display: flex; justify-content: space-between;
+            padding: calc(var(--safe-top) + 5px) 20px 5px 20px;
+            display: flex; justify-content: space-between;
             font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.1);
         }
 
@@ -28,8 +41,7 @@
             flex: 1; display: grid; 
             grid-template-columns: repeat(4, 1fr); 
             grid-template-rows: repeat(6, 1fr); 
-            gap: 10px; padding: 15px;
-            position: relative;
+            gap: 10px; padding: 10px 20px;
             box-sizing: border-box;
         }
 
@@ -42,12 +54,12 @@
             display: flex; flex-direction: column; align-items: center; 
             text-decoration: none; color: white; width: 70px;
             touch-action: none;
-            /* 💡 硬體加速，消除殘影 */
-            transition: transform 0.35s cubic-bezier(0.19, 1, 0.22, 1);
+            transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.2s;
             will-change: transform;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
         }
+
+        /* 💡 解決重複圖示：隱藏原本格位裡的圖示 */
+        .source-hidden { opacity: 0; pointer-events: none; }
         
         .icon-box {
             width: 60px; height: 60px; border-radius: 14px;
@@ -56,7 +68,7 @@
         }
 
         .dragging {
-            opacity: 0.7; transform: scale(1.1) !important;
+            opacity: 0.9; transform: scale(1.1) !important;
             position: fixed !important; z-index: 999;
             pointer-events: none;
             transition: none !important;
@@ -65,7 +77,8 @@
         #dock {
             background: rgba(255,255,255,0.2); backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            margin: 15px 20px 30px 20px; padding: 12px; border-radius: 30px;
+            margin: 10px 20px calc(var(--safe-bottom) + 15px) 20px;
+            padding: 12px; border-radius: 30px;
             display: flex; justify-content: space-around; align-items: center;
         }
         .dock-item { text-decoration: none; font-size: 26px; }
@@ -101,11 +114,13 @@
 
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout;
-    let isReordering = false; // 💡 防止過度運算的旗標
+    let isReordering = false;
 
     function loadWallpaper() {
         const savedWallpaper = localStorage.getItem('active_wallpaper');
-        if(savedWallpaper) document.body.style.backgroundImage = `url(${savedWallpaper})`;
+        if(savedWallpaper) {
+            document.body.style.backgroundImage = `url(${savedWallpaper})`;
+        }
     }
 
     function initDesktop() {
@@ -137,20 +152,35 @@
             dragTimeout = setTimeout(() => {
                 isDragging = true;
                 if (navigator.vibrate) navigator.vibrate(40);
-                el.classList.add('dragging');
-                document.body.appendChild(el);
+                
+                // 💡 關鍵修復：長按成功後，先讓格位裡的原始圖示消失，避免重複
+                el.classList.add('source-hidden');
+                
+                // 複製一個「影子」來跟隨手指
+                const clone = el.cloneNode(true);
+                clone.classList.remove('source-hidden');
+                clone.classList.add('dragging');
+                document.body.appendChild(clone);
+                
+                window._activeClone = clone;
+                const touch = e.touches[0];
+                updateClonePos(touch.clientX, touch.clientY);
             }, 500);
         }, {passive: true});
+
+        function updateClonePos(x, y) {
+            if(window._activeClone) {
+                window._activeClone.style.left = x - 35 + 'px';
+                window._activeClone.style.top = y - 35 + 'px';
+            }
+        }
 
         el.addEventListener('touchmove', (e) => {
             if (!isDragging) return clearTimeout(dragTimeout);
             const touch = e.touches[0];
-            el.style.left = touch.clientX - 35 + 'px';
-            el.style.top = touch.clientY - 35 + 'px';
+            updateClonePos(touch.clientX, touch.clientY);
 
-            // 💡 限制運算頻率，解決卡頓
             if (isReordering) return;
-
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
             const slot = target?.closest('.grid-slot');
             
@@ -160,8 +190,7 @@
                     lastTargetIdx = targetIdx;
                     isReordering = true;
                     realTimeReorder(el.dataset.id, targetIdx);
-                    // 動畫冷卻時間，讓瀏覽器喘口氣
-                    setTimeout(() => { isReordering = false; }, 50); 
+                    setTimeout(() => { isReordering = false; }, 80); 
                 }
             }
             if (e.cancelable) e.preventDefault();
@@ -171,7 +200,10 @@
             clearTimeout(dragTimeout);
             if (!isDragging) return;
             isDragging = false;
-            el.classList.remove('dragging');
+            if(window._activeClone) {
+                window._activeClone.remove();
+                window._activeClone = null;
+            }
             localStorage.setItem('desktop_layout', JSON.stringify(appData));
             initDesktop(); 
         });
@@ -194,14 +226,13 @@
         const slots = document.querySelectorAll('.grid-slot');
         appData.forEach(app => {
             const appEl = document.querySelector(`.app-icon[data-id="${app.id}"]`);
-            if (appEl && !appEl.classList.contains('dragging')) {
-                slots[app.slot].appendChild(appEl);
-            }
+            if (appEl) slots[app.slot].appendChild(appEl);
         });
 
         requestAnimationFrame(() => {
             allAppElements.forEach(el => {
                 const id = el.dataset.id;
+                if (!firstPositions[id]) return;
                 const rect = el.getBoundingClientRect();
                 const deltaX = firstPositions[id].x - rect.left;
                 const deltaY = firstPositions[id].y - rect.top;
@@ -209,7 +240,7 @@
                     el.style.transition = 'none';
                     el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
                     el.offsetWidth; 
-                    el.style.transition = 'transform 0.35s cubic-bezier(0.19, 1, 0.22, 1)';
+                    el.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
                     el.style.transform = 'translate(0, 0)';
                 }
             });

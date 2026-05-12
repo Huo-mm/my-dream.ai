@@ -14,8 +14,13 @@
             background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
             background-size: cover;
             background-position: center;
-            background-repeat: no-repeat; /* 確保不重複 */
+            background-repeat: no-repeat;
             transition: background-image 0.5s ease-in-out;
+            
+            /* 防止整個網頁被選取或彈出選單 */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         #status-bar {
@@ -32,17 +37,24 @@
 
         .app-icon {
             display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white;
-            cursor: grab; /* 提示可以抓取 */
+            cursor: grab;
+            
+            /* --- 關鍵修改：禁用長按跳出瀏覽器選單 --- */
+            -webkit-touch-callout: none; /* 針對 iOS Safari */
+            -webkit-user-select: none;    /* 針對 Chrome/Safari */
+            user-select: none;           /* 標準屬性 */
+            -webkit-tap-highlight-color: transparent; /* 移除點擊時的藍色高亮 */
         }
+        
         .icon-box {
             width: 60px; height: 60px; border-radius: 14px;
             display: flex; justify-content: center; align-items: center;
             font-size: 30px; margin-bottom: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             transition: transform 0.1s;
+            pointer-events: auto; /* 確保圖示仍可點擊 */
         }
         .icon-box:active { transform: scale(0.9); }
 
-        /* 2. 新增：拖移時的影子樣式與抖動動畫 */
         .sortable-ghost { opacity: 0.3; }
         @keyframes jiggle {
             0% { transform: rotate(-1.5deg); }
@@ -57,7 +69,10 @@
             margin: 20px; padding: 12px; border-radius: 28px;
             display: flex; justify-content: space-around; align-items: center;
         }
-        .dock-item { text-decoration: none; font-size: 26px; cursor: pointer; }
+        .dock-item { 
+            text-decoration: none; font-size: 26px; cursor: pointer;
+            -webkit-touch-callout: none;
+        }
     </style>
 </head>
 <body>
@@ -124,7 +139,6 @@
         const savedWallpaper = localStorage.getItem('active_wallpaper');
         if(savedWallpaper) {
             document.body.style.backgroundImage = `url(${savedWallpaper})`;
-            // 3. 修改：確保設定桌布時是填滿狀態
             document.body.style.backgroundSize = "cover";
             document.body.style.backgroundPosition = "center";
         }
@@ -152,29 +166,34 @@
         }
     }
 
-    // 4. 新增：初始化拖移功能
     function initDragAndDrop() {
         const el = document.getElementById('home-screen');
         new Sortable(el, {
             animation: 150,
             ghostClass: 'sortable-ghost',
-            delay: 500, // 長按 0.5 秒啟動
+            delay: 500, 
             delayOnTouchOnly: true,
             onStart: function() {
                 document.body.classList.add('editing');
             },
             onEnd: function() {
                 document.body.classList.remove('editing');
-                // 同步保存位置順序（可選功能，暫時先讓它能動）
             }
         });
     }
+
+    // 禁用圖片長按儲存（針對某些瀏覽器）
+    window.oncontextmenu = function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        return false;
+    };
 
     window.onload = function() {
         updateTime();
         loadWallpaper();
         checkAlarmsOnHome();
-        initDragAndDrop(); // 啟動拖移
+        initDragAndDrop();
         
         setInterval(updateTime, 1000);
         setInterval(checkAlarmsOnHome, 1000);

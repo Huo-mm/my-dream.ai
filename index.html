@@ -21,27 +21,23 @@
             font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.1);
         }
 
-        /* 桌面核心：4x6 格線佈局 */
         #home-screen {
             flex: 1; display: grid; 
             grid-template-columns: repeat(4, 1fr); 
-            grid-template-rows: repeat(6, 1fr); /* 4x6 框架 */
+            grid-template-rows: repeat(6, 1fr); 
             gap: 15px; padding: 20px;
             position: relative;
         }
 
-        /* 隱形的格位容器 */
         .grid-slot {
             width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
-            position: relative;
         }
 
         .app-icon {
             display: flex; flex-direction: column; align-items: center; 
-            text-decoration: none; color: white;
-            width: 70px; z-index: 10;
-            touch-action: none; /* 禁用預設觸摸行為以便拖拽 */
+            text-decoration: none; color: white; width: 70px; z-index: 10;
+            touch-action: none;
         }
         
         .icon-box {
@@ -51,7 +47,7 @@
             transition: transform 0.1s;
         }
 
-        /* 拖移時的樣式 */
+        /* 拖移時的樣式：微微放大且變透明 */
         .dragging {
             opacity: 0.8; transform: scale(1.1);
             position: fixed !important; z-index: 999;
@@ -74,8 +70,7 @@
     <span>📶 🔋 100%</span>
 </div>
 
-<div id="home-screen">
-    </div>
+<div id="home-screen"></div>
 
 <div id="dock">
     <a href="chat.html" class="dock-item">💬</a>
@@ -86,7 +81,6 @@
 </div>
 
 <script>
-    // App 數據與其位置 (slotIndex 0-23)
     let appData = JSON.parse(localStorage.getItem('desktop_layout')) || [
         { id: 'chat', name: 'AI 助手', icon: '💬', color: '#4285f4', url: 'chat.html', slot: 0 },
         { id: 'clock', name: '時鐘', icon: '⏰', color: '#ff9800', url: 'clock.html', slot: 1 },
@@ -98,16 +92,18 @@
     ];
 
     const homeScreen = document.getElementById('home-screen');
+    let dragTimeout;
 
     function initDesktop() {
         homeScreen.innerHTML = '';
-        // 生成 24 個格位 (4欄 x 6列)
+        // 確保數據是按 slot 排序的
+        appData.sort((a, b) => a.slot - b.slot);
+        
         for (let i = 0; i < 24; i++) {
             const slot = document.createElement('div');
             slot.className = 'grid-slot';
             slot.dataset.index = i;
             
-            // 檢查此格位是否有 App
             const app = appData.find(a => a.slot === i);
             if (app) {
                 const appEl = createAppElement(app);
@@ -126,26 +122,21 @@
             <div class="icon-box" style="background: ${app.color};">${app.icon}</div>
             <span style="font-size: 12px;">${app.name}</span>
         `;
-
-        // 綁定自定義拖拽邏輯
         setupDragging(a);
         return a;
     }
 
     function setupDragging(el) {
         let isDragging = false;
-        let startX, startY;
-        let originalParent;
 
         el.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
-            startX = touch.clientX;
-            startY = touch.clientY;
-            
-            // 長按 500ms 開啟拖拽
             dragTimeout = setTimeout(() => {
                 isDragging = true;
-                originalParent = el.parentElement;
+                
+                // 📱 成功進入拖拽模式，震一下！
+                if (navigator.vibrate) navigator.vibrate(50);
+
                 el.classList.add('dragging');
                 document.body.appendChild(el);
                 moveAt(touch.clientX, touch.clientY);
@@ -164,40 +155,45 @@
             }
             const touch = e.touches[0];
             moveAt(touch.clientX, touch.clientY);
-        });
+            e.preventDefault(); 
+        }, {passive: false});
 
         el.addEventListener('touchend', (e) => {
             clearTimeout(dragTimeout);
             if (!isDragging) return;
             isDragging = false;
             el.classList.remove('dragging');
-            el.style.left = ''; el.style.top = '';
-
-            // 尋找放開位置下方的格位
+            
             const touch = e.changedTouches[0];
             const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
             const slot = dropTarget?.closest('.grid-slot');
 
             if (slot) {
                 const targetIdx = parseInt(slot.dataset.index);
-                // 檢查目標位置是否已有 App
-                const existingApp = appData.find(a => a.slot === targetIdx);
-                const currentApp = appData.find(a => a.id === el.dataset.id);
-
-                if (!existingApp) {
-                    currentApp.slot = targetIdx;
-                } else {
-                    // 如果有 App，可以選擇交換位置
-                    existingApp.slot = currentApp.slot;
-                    currentApp.slot = targetIdx;
-                }
+                const movingId = el.dataset.id;
+                
+                // --- 🌊 水流排擠核心邏輯 ---
+                // 1. 取出正在動的那個
+                const movingApp = appData.find(a => a.id === movingId);
+                // 2. 過濾掉它，剩下按順序排好
+                let others = appData.filter(a => a.id !== movingId).sort((a, b) => a.slot - b.slot);
+                
+                // 3. 把動的那個插進去目標位置
+                others.splice(targetIdx, 0, movingApp);
+                
+                // 4. 重新賦予所有 App 連續的 slot 編號
+                others.forEach((app, index) => {
+                    app.slot = index;
+                });
+                
+                appData = others;
                 localStorage.setItem('desktop_layout', JSON.stringify(appData));
             }
-            initDesktop(); // 重新渲染
+            
+            initDesktop(); 
         });
     }
 
-    // 更新時間等原有的系統功能...
     function updateTime() {
         const now = new Date();
         document.getElementById('live-time').innerText = 
@@ -207,9 +203,7 @@
 
     function loadWallpaper() {
         const savedWallpaper = localStorage.getItem('active_wallpaper');
-        if(savedWallpaper) {
-            document.body.style.backgroundImage = `url(${savedWallpaper})`;
-        }
+        if(savedWallpaper) document.body.style.backgroundImage = `url(${savedWallpaper})`;
     }
 
     window.onload = function() {
@@ -219,7 +213,6 @@
         setInterval(updateTime, 1000);
     };
 
-    // 禁止右鍵
     window.oncontextmenu = (e) => e.preventDefault();
 </script>
 </body>

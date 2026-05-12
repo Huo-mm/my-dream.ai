@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-    <title>My Personal OS</title>
+    <title>MINE Personal OS</title>
     <style>
         :root { --bg: #222; }
         body { 
             margin: 0; color: white; 
             font-family: -apple-system, sans-serif;
             height: 100dvh; display: flex; flex-direction: column;
+            /* 桌布設定 - 恢復預設，避免 JS 載入前空白 */
             background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
             background-size: cover; background-position: center;
-            /* 允許 Y 軸滾動，但隱藏捲動條，確保下拉刷新能觸發 */
             overflow-y: auto; overflow-x: hidden;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
@@ -29,20 +29,21 @@
             grid-template-rows: repeat(6, 1fr); 
             gap: 15px; padding: 20px;
             position: relative;
-            min-height: 80vh; /* 確保內容撐開以便下拉 */
+            min-height: 85vh; /* 確保內容撐開以便下拉刷新 */
         }
 
         .grid-slot {
             width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
-            transition: all 0.3s ease; /* 讓 App 移動時有平滑動畫 */
         }
 
         .app-icon {
             display: flex; flex-direction: column; align-items: center; 
             text-decoration: none; color: white; width: 70px; z-index: 10;
             touch-action: none;
-            transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+            /* 讓所有 App 預設擁有平移動畫，這是絲滑感的來源 */
+            transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+            will-change: transform; /* 告訴瀏覽器優化這個屬性 */
         }
         
         .icon-box {
@@ -51,12 +52,12 @@
             font-size: 30px; margin-bottom: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* 正在被拖移的 App */
+        /* 正在被拖移的 App：不要動畫，必須絕對跟手 */
         .dragging {
-            opacity: 0.9; transform: scale(1.15);
+            opacity: 0.8; transform: scale(1.15) !important;
             position: fixed !important; z-index: 999;
             pointer-events: none;
-            transition: none !important; /* 拖移時不要動畫，才會跟手 */
+            transition: none !important; /* 強制關閉動畫 */
         }
 
         #dock {
@@ -100,6 +101,14 @@
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout;
 
+    // --- 復活桌布函數 ---
+    function loadWallpaper() {
+        const savedWallpaper = localStorage.getItem('active_wallpaper');
+        if(savedWallpaper) {
+            document.body.style.backgroundImage = `url(${savedWallpaper})`;
+        }
+    }
+
     function initDesktop() {
         homeScreen.innerHTML = '';
         appData.sort((a, b) => a.slot - b.slot);
@@ -128,8 +137,7 @@
 
         el.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
-            // 只有在頁面最頂端時，長按才生效，避免干擾下拉刷新
-            if (window.scrollY > 10) return;
+            if (window.scrollY > 10) return; // 如果沒在頁面頂端，不觸發拖移，讓給下拉刷新
 
             dragTimeout = setTimeout(() => {
                 isDragging = true;
@@ -144,16 +152,14 @@
             el.style.left = pageX - 35 + 'px';
             el.style.top = pageY - 35 + 'px';
 
-            // 🔍 即時重排核心：偵測手指下的格位
             const target = document.elementFromPoint(pageX, pageY);
             const slot = target?.closest('.grid-slot');
             
             if (slot) {
                 const targetIdx = parseInt(slot.dataset.index);
-                // 如果移動到新格位，且該格位在有效範圍內
                 if (targetIdx !== lastTargetIdx && targetIdx < appData.length) {
                     lastTargetIdx = targetIdx;
-                    realTimeReorder(el.dataset.id, targetIdx);
+                    realTimeReorderWithFlip(el.dataset.id, targetIdx);
                 }
             }
         }
@@ -165,7 +171,6 @@
             }
             const touch = e.touches[0];
             moveAt(touch.clientX, touch.clientY);
-            // 關鍵：只有正在拖移時才禁止頁面滾動
             if (e.cancelable) e.preventDefault();
         }, {passive: false});
 
@@ -179,21 +184,28 @@
         });
     }
 
-    function realTimeReorder(movingId, targetIdx) {
-        const movingApp = appData.find(a => a.id === movingId);
-        if (movingApp.slot === targetIdx) return;
+    // --- 🏆 核心黑科技：FLIP Animation 絲滑平移 ---
+    function realTimeReorderWithFlip(movingId, targetIdx) {
+        const allAppElements = document.querySelectorAll('.app-icon:not(.dragging)');
+        
+        // 1. First: 記錄所有 App 的初始位置 (座標)
+        const firstPositions = {};
+        allAppElements.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            firstPositions[el.dataset.id] = { x: rect.left, y: rect.top };
+        });
 
-        // 重新洗牌
+        // 2. 核心：在數據層重新洗牌 (Data reordering)
+        const movingApp = appData.find(a => a.id === movingId);
         let others = appData.filter(a => a.id !== movingId).sort((a, b) => a.slot - b.slot);
         others.splice(targetIdx, 0, movingApp);
         
         others.forEach((app, index) => {
             app.slot = index;
         });
-
         appData = others;
-        
-        // 僅更新 DOM 位置，不重新 init 以保持流暢感
+
+        // 3. 核心：重排 DOM 元素位置
         const slots = document.querySelectorAll('.grid-slot');
         appData.forEach(app => {
             const appEl = document.querySelector(`.app-icon[data-id="${app.id}"]`);
@@ -201,9 +213,34 @@
                 slots[app.slot].appendChild(appEl);
             }
         });
+
+        // 4. Last & Invert: 計算誤差並施加反向動畫
+        requestAnimationFrame(() => {
+            allAppElements.forEach(el => {
+                const id = el.dataset.id;
+                const rect = el.getBoundingClientRect();
+                
+                // 計算它「滑過來」之前的舊位置誤差
+                const deltaX = firstPositions[id].x - rect.left;
+                const deltaY = firstPositions[id].y - rect.top;
+
+                if (deltaX !== 0 || deltaY !== 0) {
+                    // 暫時關閉 transition，將其「閃現」回舊位置
+                    el.style.transition = 'none';
+                    el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    
+                    // 強制重繪 (Recalculate layout)
+                    el.offsetWidth; 
+                    
+                    // 恢復 transition，讓它用滑的方式回到 0,0
+                    el.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
+                    el.style.transform = 'translate(0, 0)';
+                }
+            });
+        });
     }
 
-    // 更新時間... (同前)
+    // --- 時間與系統功能 ---
     function updateTime() {
         const now = new Date();
         document.getElementById('live-time').innerText = 
@@ -213,9 +250,11 @@
 
     window.onload = function() {
         updateTime();
+        loadWallpaper(); // 復活！載入桌布喵
         initDesktop();
         setInterval(updateTime, 1000);
     };
+
     window.oncontextmenu = (e) => e.preventDefault();
 </script>
 </body>

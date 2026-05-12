@@ -9,27 +9,28 @@
         body { 
             margin: 0; color: white; 
             font-family: -apple-system, sans-serif;
-            height: 100dvh; display: flex; flex-direction: column;
-            /* 桌布設定 - 恢復預設，避免 JS 載入前空白 */
+            height: 100dvh; width: 100vw;
+            display: flex; flex-direction: column;
             background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); 
             background-size: cover; background-position: center;
-            overflow-y: auto; overflow-x: hidden;
+            /* 💡 徹底鎖定畫面，禁止滾動 */
+            overflow: hidden;
+            position: fixed; 
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
 
         #status-bar {
             padding: 10px 20px; display: flex; justify-content: space-between;
             font-size: 14px; font-weight: bold; background: rgba(0,0,0,0.1);
-            position: sticky; top: 0; z-index: 100;
         }
 
         #home-screen {
             flex: 1; display: grid; 
             grid-template-columns: repeat(4, 1fr); 
             grid-template-rows: repeat(6, 1fr); 
-            gap: 15px; padding: 20px;
+            gap: 10px; padding: 15px;
             position: relative;
-            min-height: 85vh; /* 確保內容撐開以便下拉刷新 */
+            box-sizing: border-box;
         }
 
         .grid-slot {
@@ -39,11 +40,13 @@
 
         .app-icon {
             display: flex; flex-direction: column; align-items: center; 
-            text-decoration: none; color: white; width: 70px; z-index: 10;
+            text-decoration: none; color: white; width: 70px;
             touch-action: none;
-            /* 讓所有 App 預設擁有平移動畫，這是絲滑感的來源 */
-            transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            will-change: transform; /* 告訴瀏覽器優化這個屬性 */
+            /* 💡 硬體加速，消除殘影 */
+            transition: transform 0.35s cubic-bezier(0.19, 1, 0.22, 1);
+            will-change: transform;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
         }
         
         .icon-box {
@@ -52,20 +55,18 @@
             font-size: 30px; margin-bottom: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* 正在被拖移的 App：不要動畫，必須絕對跟手 */
         .dragging {
-            opacity: 0.8; transform: scale(1.15) !important;
+            opacity: 0.7; transform: scale(1.1) !important;
             position: fixed !important; z-index: 999;
             pointer-events: none;
-            transition: none !important; /* 強制關閉動畫 */
+            transition: none !important;
         }
 
         #dock {
-            background: rgba(255,255,255,0.25); backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            margin: 20px; padding: 12px; border-radius: 28px;
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            margin: 15px 20px 30px 20px; padding: 12px; border-radius: 30px;
             display: flex; justify-content: space-around; align-items: center;
-            position: sticky; bottom: 20px;
         }
         .dock-item { text-decoration: none; font-size: 26px; }
     </style>
@@ -100,19 +101,16 @@
 
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout;
+    let isReordering = false; // 💡 防止過度運算的旗標
 
-    // --- 復活桌布函數 ---
     function loadWallpaper() {
         const savedWallpaper = localStorage.getItem('active_wallpaper');
-        if(savedWallpaper) {
-            document.body.style.backgroundImage = `url(${savedWallpaper})`;
-        }
+        if(savedWallpaper) document.body.style.backgroundImage = `url(${savedWallpaper})`;
     }
 
     function initDesktop() {
         homeScreen.innerHTML = '';
         appData.sort((a, b) => a.slot - b.slot);
-        
         for (let i = 0; i < 24; i++) {
             const slot = document.createElement('div');
             slot.className = 'grid-slot';
@@ -136,45 +134,40 @@
         let lastTargetIdx = -1;
 
         el.addEventListener('touchstart', (e) => {
-            const touch = e.touches[0];
-            if (window.scrollY > 10) return; // 如果沒在頁面頂端，不觸發拖移，讓給下拉刷新
-
             dragTimeout = setTimeout(() => {
                 isDragging = true;
                 if (navigator.vibrate) navigator.vibrate(40);
                 el.classList.add('dragging');
                 document.body.appendChild(el);
-                moveAt(touch.clientX, touch.clientY);
             }, 500);
         }, {passive: true});
 
-        function moveAt(pageX, pageY) {
-            el.style.left = pageX - 35 + 'px';
-            el.style.top = pageY - 35 + 'px';
+        el.addEventListener('touchmove', (e) => {
+            if (!isDragging) return clearTimeout(dragTimeout);
+            const touch = e.touches[0];
+            el.style.left = touch.clientX - 35 + 'px';
+            el.style.top = touch.clientY - 35 + 'px';
 
-            const target = document.elementFromPoint(pageX, pageY);
+            // 💡 限制運算頻率，解決卡頓
+            if (isReordering) return;
+
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
             const slot = target?.closest('.grid-slot');
             
             if (slot) {
                 const targetIdx = parseInt(slot.dataset.index);
                 if (targetIdx !== lastTargetIdx && targetIdx < appData.length) {
                     lastTargetIdx = targetIdx;
-                    realTimeReorderWithFlip(el.dataset.id, targetIdx);
+                    isReordering = true;
+                    realTimeReorder(el.dataset.id, targetIdx);
+                    // 動畫冷卻時間，讓瀏覽器喘口氣
+                    setTimeout(() => { isReordering = false; }, 50); 
                 }
             }
-        }
-
-        el.addEventListener('touchmove', (e) => {
-            if (!isDragging) {
-                clearTimeout(dragTimeout);
-                return;
-            }
-            const touch = e.touches[0];
-            moveAt(touch.clientX, touch.clientY);
             if (e.cancelable) e.preventDefault();
         }, {passive: false});
 
-        el.addEventListener('touchend', (e) => {
+        el.addEventListener('touchend', () => {
             clearTimeout(dragTimeout);
             if (!isDragging) return;
             isDragging = false;
@@ -184,28 +177,20 @@
         });
     }
 
-    // --- 🏆 核心黑科技：FLIP Animation 絲滑平移 ---
-    function realTimeReorderWithFlip(movingId, targetIdx) {
+    function realTimeReorder(movingId, targetIdx) {
         const allAppElements = document.querySelectorAll('.app-icon:not(.dragging)');
-        
-        // 1. First: 記錄所有 App 的初始位置 (座標)
         const firstPositions = {};
         allAppElements.forEach(el => {
             const rect = el.getBoundingClientRect();
             firstPositions[el.dataset.id] = { x: rect.left, y: rect.top };
         });
 
-        // 2. 核心：在數據層重新洗牌 (Data reordering)
         const movingApp = appData.find(a => a.id === movingId);
         let others = appData.filter(a => a.id !== movingId).sort((a, b) => a.slot - b.slot);
         others.splice(targetIdx, 0, movingApp);
-        
-        others.forEach((app, index) => {
-            app.slot = index;
-        });
+        others.forEach((app, index) => app.slot = index);
         appData = others;
 
-        // 3. 核心：重排 DOM 元素位置
         const slots = document.querySelectorAll('.grid-slot');
         appData.forEach(app => {
             const appEl = document.querySelector(`.app-icon[data-id="${app.id}"]`);
@@ -214,33 +199,23 @@
             }
         });
 
-        // 4. Last & Invert: 計算誤差並施加反向動畫
         requestAnimationFrame(() => {
             allAppElements.forEach(el => {
                 const id = el.dataset.id;
                 const rect = el.getBoundingClientRect();
-                
-                // 計算它「滑過來」之前的舊位置誤差
                 const deltaX = firstPositions[id].x - rect.left;
                 const deltaY = firstPositions[id].y - rect.top;
-
                 if (deltaX !== 0 || deltaY !== 0) {
-                    // 暫時關閉 transition，將其「閃現」回舊位置
                     el.style.transition = 'none';
                     el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-                    
-                    // 強制重繪 (Recalculate layout)
                     el.offsetWidth; 
-                    
-                    // 恢復 transition，讓它用滑的方式回到 0,0
-                    el.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
+                    el.style.transition = 'transform 0.35s cubic-bezier(0.19, 1, 0.22, 1)';
                     el.style.transform = 'translate(0, 0)';
                 }
             });
         });
     }
 
-    // --- 時間與系統功能 ---
     function updateTime() {
         const now = new Date();
         document.getElementById('live-time').innerText = 
@@ -248,13 +223,12 @@
             now.getMinutes().toString().padStart(2, '0');
     }
 
-    window.onload = function() {
+    window.onload = () => {
         updateTime();
-        loadWallpaper(); // 復活！載入桌布喵
+        loadWallpaper();
         initDesktop();
         setInterval(updateTime, 1000);
     };
-
     window.oncontextmenu = (e) => e.preventDefault();
 </script>
 </body>

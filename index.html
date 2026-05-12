@@ -8,21 +8,18 @@
         :root { 
             --safe-top: env(safe-area-inset-top); 
             --safe-bottom: env(safe-area-inset-bottom);
-            --theme-color: #4285f4; /* 預設主題色 */
+            --theme-color: #4285f4; 
         }
         
-        html, body { 
-            margin: 0; padding: 0; height: 100%; width: 100%; 
-            overflow: auto; background: #1a2a6c; 
-        }
+        html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: auto; background: #1a2a6c; }
         
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
             background-color: var(--theme-color);
+            background-image: none; 
             background-size: cover; background-position: center;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            transition: background 0.3s ease; /* 換色時有一點過渡感 */
         }
 
         #status-bar {
@@ -42,7 +39,6 @@
         .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
         
-        /* ✨ 圖示底色連動主題變數 */
         .icon-box { 
             width: 55px; height: 55px; border-radius: 14px; 
             display: flex; justify-content: center; align-items: center; 
@@ -85,53 +81,61 @@
 </div>
 
 <script>
+    // 💡 強制注入新 App 的邏輯
     function getAppData() {
-        const newData = localStorage.getItem('desktop_layout_ordered');
-        if (newData) return JSON.parse(newData);
-        return [
+        const defaultApps = [
             { id: 'chat', name: 'AI 助手', icon: '💬', url: 'chat.html' },
             { id: 'clock', name: '時鐘', icon: '⏰', url: 'clock.html' },
             { id: 'weather', name: '氣象', icon: '☁️', url: 'weather.html' },
             { id: 'gallery', name: '相簿', icon: '🖼️', url: 'gallery.html' },
             { id: 'notes', name: '備忘錄', icon: '📝', url: 'notes.html' },
-            /* ✨ 加入系統自定義 App */
-            { id: 'settings', name: '視覺設定', icon: '🎨', url: 'settings.html' },
+            { id: 'settings', name: '系統設定', icon: '⚙️', url: 'settings.html' },
             { id: 'archive', name: '記憶倉庫', icon: '🏛️', url: 'archive.html' },
             { id: 'mail', name: '信箱', icon: '✉️', url: 'mail.html' }
         ];
+
+        let currentData = localStorage.getItem('desktop_layout_ordered');
+        
+        if (currentData) {
+            let parsed = JSON.parse(currentData);
+            // ✨ 檢查是否缺少「settings」
+            const hasSettings = parsed.some(app => app.id === 'settings');
+            if (!hasSettings) {
+                // 如果缺了，強行把 settings 加進去並更新快取
+                parsed.push(defaultApps.find(a => a.id === 'settings'));
+                localStorage.setItem('desktop_layout_ordered', JSON.stringify(parsed));
+                return parsed;
+            }
+            return parsed;
+        }
+        return defaultApps;
     }
 
     let appData = getAppData();
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
-    // ✨ 核心功能：應用視覺主題
-    function applyThemeSettings() {
-        // 1. 取得主題色與背景設定
+    function applyThemeAndWallpaper() {
         const themeColor = localStorage.getItem('system_theme_color') || '#4285f4';
-        const bgStyle = localStorage.getItem('bg_style') || 'gradient';
-        const solidColor = localStorage.getItem('solid_bg_color') || themeColor;
-        const savedWallpaper = localStorage.getItem('active_wallpaper');
-
-        // 2. 套用圖示主題變數
         document.documentElement.style.setProperty('--theme-color', themeColor);
         
-        // 3. 處理背景邏輯
+        const savedWallpaper = localStorage.getItem('active_wallpaper');
+        const bgStyle = localStorage.getItem('bg_style') || 'gradient';
+        const solidColor = localStorage.getItem('solid_bg_color') || themeColor;
+
         if (savedWallpaper) {
-            // 有桌布則顯示桌布
             document.body.style.backgroundImage = `url(${savedWallpaper})`;
         } else {
             if (bgStyle === 'gradient') {
-                // 配套漸層：從選擇的顏色過渡到深色底
                 document.body.style.backgroundImage = `linear-gradient(180deg, ${solidColor}, #1a2a6c)`;
             } else {
-                // 純色
                 document.body.style.backgroundImage = 'none';
                 document.body.style.backgroundColor = solidColor;
             }
         }
     }
 
+    // 拖移與畫面初始化邏輯 (保持跟之前一樣的穩定版)
     document.addEventListener('touchmove', (e) => {
         if (window._activeClone) { if (e.cancelable) e.preventDefault(); }
     }, {passive: false});
@@ -159,8 +163,6 @@
         setupDragging(a);
         return a;
     }
-
-    // ... (setupDragging, realTimeReflow, updateTime 函數保持不變，與之前版本相同) ...
 
     function setupDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
@@ -258,12 +260,10 @@
 
     window.onload = () => { 
         updateTime(); 
-        applyThemeSettings(); // ✨ 執行主題與背景設定
+        applyThemeAndWallpaper(); 
         initDesktop(); 
         setInterval(updateTime, 1000); 
     };
-    document.addEventListener('selectstart', (e) => e.preventDefault());
-    window.oncontextmenu = (e) => e.preventDefault();
 </script>
 </body>
 </html>

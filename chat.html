@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MINE - AI 助手</title>
+    <title>MINE</title>
     <style>
         /* 預設顏色，會被 JS 動態覆蓋 */
         :root { 
@@ -100,8 +100,8 @@
 <div id="sidebar">
     <h2 style="margin-top:0; font-size: 20px; color: #333;">⚙️ 助手設定</h2>
     <div class="set-group"><label>Gemini API Key</label><input type="password" id="apiKey" class="set-input" placeholder="貼上你的 API Key..."></div>
-    <div class="set-group"><label>助手名稱</label><input type="text" id="charName" class="set-input"></div>
-    <div class="set-group"><label>角色人格設定</label><textarea id="charPrompt" rows="6" placeholder="例如：你是一個喜歡貓的毒舌秘書..."></textarea></div>
+    <div class="set-group"><label>角色名稱</label><input type="text" id="charName" class="set-input"></div>
+    <div class="set-group"><label>角色人格設定</label><textarea id="charPrompt" rows="6" placeholder="例如：你是一個溫柔貼心的戀人"></textarea></div>
     <button class="btn-action" style="background: var(--primary); color:var(--text-on-primary);" onclick="saveSettings()">儲存並更新</button>
     <button class="btn-action" style="background: #f5f5f5; color:#666;" onclick="clearHistory()">封存對話記憶</button>
 </div>
@@ -118,8 +118,8 @@
     <div id="chat-box"></div>
 
     <div class="input-area">
-        <input type="text" id="userInput" placeholder="傳送訊息喵..." onkeypress="if(event.key==='Enter')send()">
-        <button class="send-btn" id="sendBtn" onclick="send()">✈</button>
+        <input type="text" id="userInput" placeholder="傳送訊息..." onkeypress="if(event.key==='Enter')send()">
+        <button class="send-btn" id="sendBtn" onclick="send()">▶</button>
     </div>
 </div>
 
@@ -174,7 +174,7 @@
         inputArea.style.display = (type === 'prompt') ? 'block' : 'none';
         footer.innerHTML = '';
         if (type === 'alert') {
-            footer.innerHTML = `<button class="modal-btn" onclick="closeModal()">好的喵</button>`;
+            footer.innerHTML = `<button class="modal-btn" onclick="closeModal()">好的</button>`;
         } else {
             footer.innerHTML = `
                 <button class="modal-btn" style="color:#999" onclick="closeModal()">取消</button>
@@ -194,13 +194,13 @@
         localStorage.setItem('my_ai_key', document.getElementById('apiKey').value.trim());
         localStorage.setItem('char_name', document.getElementById('charName').value.trim());
         localStorage.setItem('char_prompt', document.getElementById('charPrompt').value.trim());
-        mineDialog({ title: '設定儲存', message: '助手人格已更新，準備就緒喵！' });
+        mineDialog({ title: '設定儲存', message: '設定已更新' });
         setTimeout(() => location.reload(), 1200);
     }
 
     function clearHistory() {
         if (chatHistory.length === 0) {
-            mineDialog({ title: '提醒', message: '目前沒有對話可以封存喔！' });
+            mineDialog({ title: '提醒', message: '目前沒有對話可以封存' });
             return;
         }
         mineDialog({
@@ -240,7 +240,7 @@
 
     async function send() {
         const key = localStorage.getItem('my_ai_key');
-        if(!key || !activeModel) { mineDialog({ title: '尚未設定', message: '請點擊右上角⚙️填寫 API Key 喵！' }); return; }
+        if(!key || !activeModel) { mineDialog({ title: '尚未設定', message: '請點擊右上角⚙️填寫金鑰' }); return; }
         const input = document.getElementById('userInput');
         const text = input.value.trim();
         if(!text) return;
@@ -268,8 +268,8 @@
 4. 鬧鐘提醒設定：${savedAlarms}
 
 【回覆準則】
-- 語氣必須親切、口語，適時撒嬌加入「喵」。
-- 主動提及使用者的偏好（例如：不喜歡吃蔬菜）。
+- 語氣依照角色設定，對話以口語化為主。
+- 使用者提到相關話題時才能提及使用者的偏好。
 - 如果要寄信給使用者，請在回覆末尾加上 <SEND_MAIL>{"sender":"AI助手","subject":"標題","content":"內容"}</SEND_MAIL> 格式。
 `;
         
@@ -303,7 +303,7 @@
             localStorage.setItem('chat_history', JSON.stringify(chatHistory));
         } catch (e) { 
             typingDiv.remove();
-            addBubble("哎呀，連線斷掉了喵...請檢查網路或 API Key。", 'a'); 
+            addBubble("哎呀，連線斷掉了...請檢查網路或金鑰", 'a'); 
         }
     }
 

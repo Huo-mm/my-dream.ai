@@ -3,92 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>主題大師</title>
+    <title>視覺自定義中心</title>
     <style>
         body {
-            margin: 0; background: #f8f9fa; font-family: -apple-system, sans-serif;
+            margin: 0; background: #f4f4f9; font-family: -apple-system, sans-serif;
             padding: calc(env(safe-area-inset-top) + 20px) 20px env(safe-area-inset-bottom);
+            color: #333;
         }
         .header { display: flex; align-items: center; margin-bottom: 25px; }
         .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; }
         
-        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .card-title { font-size: 16px; font-weight: bold; margin-bottom: 20px; color: #333; }
+        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .card-title { font-size: 16px; font-weight: bold; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
         
-        /* 雙色挑選器樣式 */
-        .dual-picker { display: flex; justify-content: space-around; align-items: center; margin-bottom: 25px; }
+        /* 雙色挑選器 */
+        .dual-picker { display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px; }
         .picker-group { text-align: center; }
         input[type="color"] {
-            -webkit-appearance: none; border: none; width: 80px; height: 80px; border-radius: 20px; cursor: pointer; background: none;
+            -webkit-appearance: none; border: none; width: 70px; height: 70px; border-radius: 18px; cursor: pointer; background: none;
         }
-        input[type="color"]::-webkit-color-swatch { border: 3px solid #eee; border-radius: 20px; }
-        
-        .arrow { font-size: 24px; color: #ccc; }
+        input[type="color"]::-webkit-color-swatch { border: 2px solid #eee; border-radius: 18px; }
+        .arrow { font-size: 20px; color: #ccc; }
 
-        /* 預覽區域 */
-        .preview-container {
+        /* 預覽區 */
+        .preview-area {
             display: flex; gap: 15px; align-items: center; padding: 15px;
-            background: #eee; border-radius: 15px; margin-bottom: 20px;
+            background: #f0f0f0; border-radius: 15px; margin-bottom: 20px;
         }
-        .preview-icon {
-            width: 50px; height: 50px; border-radius: 12px;
-            display: flex; align-items: center; justify-content: center; font-size: 24px;
-        }
-        .preview-bg {
-            flex: 1; height: 50px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;
-        }
+        #iconPreview { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        #bgPreview { flex: 1; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
 
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        /* 按鈕組 */
+        .control-group { display: flex; flex-direction: column; gap: 10px; }
         .btn {
-            border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: bold;
-            cursor: pointer; background: #007aff; color: white; transition: 0.2s;
+            border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: 0.2s; background: #eee; color: #333;
         }
-        .btn-secondary { background: #E9E9EB; color: #333; }
+        .btn-primary { background: #007aff; color: white; }
+        .btn-danger { background: #ff3b30; color: white; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <a href="index.html" class="back-btn">⬅️</a>
-    <h1 style="font-size: 22px; margin: 0;">主題漸層大師</h1>
+    <h1 style="font-size: 22px; margin: 0;">視覺自定義中心</h1>
 </div>
 
 <div class="card">
-    <div class="card-title">🎨 設定自定義漸層</div>
-    
+    <div class="card-title">🎨 調配漸層色彩</div>
     <div class="dual-picker">
         <div class="picker-group">
             <input type="color" id="colorA" value="#4285f4">
-            <div style="margin-top:8px; font-size:12px; color:#666;">顏色 A</div>
+            <div style="font-size:12px; color:#888; margin-top:5px;">顏色 A</div>
         </div>
         <div class="arrow">➡️</div>
         <div class="picker-group">
             <input type="color" id="colorB" value="#1a2a6c">
-            <div style="margin-top:8px; font-size:12px; color:#666;">顏色 B</div>
+            <div style="font-size:12px; color:#888; margin-top:5px;">顏色 B</div>
         </div>
     </div>
-
-    <div style="font-size:13px; color:#888; margin-bottom:10px;">預覽效果：</div>
-    <div class="preview-container">
-        <div id="iconPreview" class="preview-icon">📱</div>
-        <div id="bgPreview" class="preview-bg">背景漸層</div>
-    </div>
-
-    <div class="btn-group">
-        <button class="btn" onclick="saveTheme()">套用漸層</button>
-        <button class="btn btn-secondary" onclick="resetTheme()">恢復預設</button>
+    
+    <div style="font-size:12px; color:#888; margin-bottom:8px;">預覽效果：</div>
+    <div class="preview-area">
+        <div id="iconPreview">📱</div>
+        <div id="bgPreview">背景漸層</div>
     </div>
 </div>
 
 <div class="card">
-    <div class="card-title">💡 預設美色推薦</div>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-        <button class="btn" style="background: linear-gradient(135deg, #FF9500, #FF3B30);" onclick="setPreset('#FF9500', '#FF3B30')">夕陽橘紅</button>
-        <button class="btn" style="background: linear-gradient(135deg, #5AC8FA, #5856D6);" onclick="setPreset('#5AC8FA', '#5856D6')">海洋之星</button>
-        <button class="btn" style="background: linear-gradient(135deg, #34C759, #007AFF);" onclick="setPreset('#34C759', '#007AFF')">森林極光</button>
-        <button class="btn" style="background: linear-gradient(135deg, #AF52DE, #FF2D55);" onclick="setPreset('#AF52DE', '#FF2D55')">魅力霓虹</button>
+    <div class="card-title">✨ 選擇套用範圍</div>
+    <div class="control-group">
+        <button class="btn btn-primary" onclick="applyToAll()">一鍵全配套用 (App + 背景)</button>
+        <button class="btn" onclick="applyToIconsOnly()">僅修改 App 圖示漸層</button>
+        <button class="btn" onclick="applyToBgOnly()">僅修改 背景漸層</button>
+        <button class="btn" onclick="removeWallpaper()">移除桌布 (恢復背景漸層)</button>
     </div>
+</div>
+
+<div class="card" style="background: transparent; box-shadow: none; padding: 0;">
+    <button class="btn btn-danger" style="width: 100%;" onclick="resetAll()">強制重設所有視覺設定</button>
 </div>
 
 <script>
@@ -97,6 +91,7 @@
     const iP = document.getElementById('iconPreview');
     const bP = document.getElementById('bgPreview');
 
+    // 即時預覽
     function updatePreview() {
         const grad = `linear-gradient(135deg, ${pA.value}, ${pB.value})`;
         iP.style.background = grad;
@@ -106,30 +101,49 @@
     pA.addEventListener('input', updatePreview);
     pB.addEventListener('input', updatePreview);
 
-    function saveTheme() {
+    // 1. 全配套用
+    function applyToAll() {
         localStorage.setItem('theme_color_a', pA.value);
         localStorage.setItem('theme_color_b', pB.value);
         localStorage.setItem('bg_style', 'gradient');
         localStorage.removeItem('active_wallpaper');
-        alert('漸層配色已更新喵！✨');
+        alert('全套漸層已套用喵！✨');
     }
 
-    function setPreset(a, b) {
-        pA.value = a;
-        pB.value = b;
-        updatePreview();
+    // 2. 僅 App 圖示
+    function applyToIconsOnly() {
+        localStorage.setItem('theme_color_a', pA.value);
+        localStorage.setItem('theme_color_b', pB.value);
+        alert('App 圖示漸層已更新！');
     }
 
-    function resetTheme() {
-        if(confirm('要恢復預設的藍色漸層嗎？')) {
+    // 3. 僅背景
+    function applyToBgOnly() {
+        // 使用一個獨立的 Key 來存背景色，不影響 App 的變數
+        localStorage.setItem('bg_color_a', pA.value);
+        localStorage.setItem('bg_color_b', pB.value);
+        localStorage.setItem('bg_style', 'gradient');
+        localStorage.removeItem('active_wallpaper');
+        alert('背景漸層已更新！');
+    }
+
+    function removeWallpaper() {
+        localStorage.removeItem('active_wallpaper');
+        alert('桌布已移除。');
+    }
+
+    function resetAll() {
+        if(confirm('確定要清除所有自定義顏色與桌布嗎？')) {
             localStorage.removeItem('theme_color_a');
             localStorage.removeItem('theme_color_b');
+            localStorage.removeItem('bg_color_a');
+            localStorage.removeItem('bg_color_b');
             localStorage.removeItem('bg_style');
+            localStorage.removeItem('active_wallpaper');
             location.reload();
         }
     }
 
-    // 初始化讀取
     window.onload = () => {
         pA.value = localStorage.getItem('theme_color_a') || '#4285f4';
         pB.value = localStorage.getItem('theme_color_b') || '#1a2a6c';

@@ -83,7 +83,7 @@
 
 <script>
     function getAppData() {
-        // ✨ 你可以在這裡直接修改 App 的顯示名稱或圖示
+        // ✨ 在 defaultApps 清單中新增了「紀念日」
         const defaultApps = [
             { id: 'chat', name: 'MINE', icon: '💬', url: 'chat.html' },
             { id: 'clock', name: '時間', icon: '⏰', url: 'clock.html' },
@@ -92,33 +92,35 @@
             { id: 'notes', name: '備忘錄', icon: '📝', url: 'notes.html' },
             { id: 'settings', name: '主題', icon: '🎨', url: 'settings.html' },
             { id: 'archive', name: '記憶倉庫', icon: '🏛️', url: 'archive.html' },
-            { id: 'mail', name: '信箱', icon: '✉️', url: 'mail.html' }
+            { id: 'mail', name: '信箱', icon: '✉️', url: 'mail.html' },
+            { id: 'anniversary', name: '紀念日', icon: '📅', url: 'anniversary.html' } // <-- 新增在這裡
         ];
 
         let currentData = localStorage.getItem('desktop_layout_ordered');
-        
+
         if (currentData) {
             let parsed = JSON.parse(currentData);
 
             // ✨ 強制同步機制：用 defaultApps 的最新名稱/圖示覆蓋舊資料，但保留排序
-            const updatedData = parsed.map(savedApp => {
+            let updatedData = parsed.map(savedApp => {
                 const latest = defaultApps.find(d => d.id === savedApp.id);
-                // 如果在最新的清單裡找得到，就更新名稱和圖示
                 return latest ? { ...savedApp, name: latest.name, icon: latest.icon, url: latest.url } : savedApp;
             });
 
-            // 檢查是否有新增加的 App（不在舊資料裡的）
+            // 檢查是否有新增加的 App（例如剛加進去的紀念日）
             defaultApps.forEach(defApp => {
                 if (!updatedData.some(a => a.id === defApp.id)) {
                     updatedData.push(defApp);
                 }
             });
 
-            // 將更新後的名稱存回快取，確保下次也是最新
+            // 移除已經不存在於 defaultApps 的 App
+            updatedData = updatedData.filter(uApp => defaultApps.some(d => d.id === uApp.id));
+
             localStorage.setItem('desktop_layout_ordered', JSON.stringify(updatedData));
             return updatedData;
         }
-        
+
         return defaultApps;
     }
 

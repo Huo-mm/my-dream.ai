@@ -166,47 +166,69 @@
 
     // ✨ 終極主題同步邏輯：確保即時性與兼容性
     function applyTheme() {
-        // 從 localStorage 獲取顏色來源
-        const appColor = localStorage.getItem('app_mail_color_a'); 
-        const systemColor = localStorage.getItem('theme_color_a');
-        const defaultRed = '#d44638';
 
-        // 優先順序：App 獨立選色 > 系統主色 > 預設紅色
-        let finalColor = appColor || systemColor || defaultRed;
+    // App 獨立色
+    const appColorA = localStorage.getItem('app_mail_color_a');
+    const appColorB = localStorage.getItem('app_mail_color_b');
 
-        // 安全處理：確保顏色字串格式正確（補上 # 號）
-        if (finalColor && !finalColor.startsWith('#')) {
-            finalColor = '#' + finalColor;
-        }
+    // 系統主題色
+    const systemColorA = localStorage.getItem('theme_color_a') || '#d44638';
+    const systemColorB = localStorage.getItem('theme_color_b') || '#8b1e14';
 
-        // 強制寫入 CSS 變數
-        const root = document.documentElement;
-        root.style.setProperty('--primary', finalColor);
+    // 最終顏色
+    let finalColorA = appColorA || systemColorA;
+    let finalColorB = appColorB || systemColorB;
 
-        // 智能亮度偵測：確保在「蘇打藍」等淺色主題下文字依然清晰
-        try {
-            const hex = finalColor.replace('#', '');
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-
-            // 亮度大於 180 為亮色調，文字改用深灰；否則維持白色
-            const textColor = brightness > 180 ? '#333333' : '#ffffff';
-            root.style.setProperty('--text-on-primary', textColor);
-            
-            // 同步更新行動端狀態列顏色
-            let metaTheme = document.querySelector('meta[name="theme-color"]');
-            if (!metaTheme) {
-                metaTheme = document.createElement('meta');
-                metaTheme.name = "theme-color";
-                document.head.appendChild(metaTheme);
-            }
-            metaTheme.content = finalColor;
-        } catch (e) {
-            root.style.setProperty('--text-on-primary', '#ffffff');
-        }
+    // 安全補 #
+    if (finalColorA && !finalColorA.startsWith('#')) {
+        finalColorA = '#' + finalColorA;
     }
+
+    if (finalColorB && !finalColorB.startsWith('#')) {
+        finalColorB = '#' + finalColorB;
+    }
+
+    // 寫入 CSS
+    const root = document.documentElement;
+
+    root.style.setProperty('--primary', finalColorA);
+    root.style.setProperty('--primary-dark', finalColorB);
+
+    // 亮度判斷
+    try {
+
+        const hex = finalColorA.replace('#', '');
+
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+        const textColor =
+            brightness > 180
+            ? '#333333'
+            : '#ffffff';
+
+        root.style.setProperty('--text-on-primary', textColor);
+
+        // Android 狀態列同步
+        let metaTheme = document.querySelector('meta[name="theme-color"]');
+
+        if (!metaTheme) {
+            metaTheme = document.createElement('meta');
+            metaTheme.name = 'theme-color';
+            document.head.appendChild(metaTheme);
+        }
+
+        metaTheme.content = finalColorA;
+
+    } catch (e) {
+
+        root.style.setProperty('--text-on-primary', '#ffffff');
+
+    }
+}
 
     // 當 localStorage 有變動時即時更新（防止跨頁面設定延遲）
     window.addEventListener('storage', (e) => {

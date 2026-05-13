@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>C² 紀念日</title>
+    <style>
+        :root { 
+            --color-a: #ff6b6b; 
+            --color-b: #ee5253;
+            --text-on-primary: #ffffff;
+            --bg: #f8f9fa;
+        }
+        body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+
+        /* App Bar */
+        .app-bar { 
+            padding: calc(env(safe-area-inset-top) + 15px) 15px 15px 15px; 
+            background: linear-gradient(135deg, var(--color-a), var(--color-b)); 
+            color: var(--text-on-primary); display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 10;
+        }
+        .back-btn { text-decoration: none; color: inherit; font-size: 20px; }
+        .add-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 12px; border-radius: 20px; font-size: 14px; }
+
+        /* 列表容器 */
+        .list-container { flex: 1; overflow-y: auto; padding: 15px; }
+        .anni-card { 
+            background: white; border-radius: 20px; padding: 20px; margin-bottom: 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: relative;
+            animation: slideUp 0.4s ease-out forwards;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .anni-info h4 { margin: 0 0 5px 0; font-size: 18px; color: #333; }
+        .anni-info p { margin: 0; font-size: 13px; color: #999; }
+        
+        .anni-days { text-align: right; }
+        .days-num { font-size: 28px; font-weight: bold; color: var(--color-a); display: block; }
+        .days-unit { font-size: 12px; color: #888; }
+
+        /* 空狀態 */
+        .empty-state { text-align: center; color: #ccc; margin-top: 100px; }
+        .empty-icon { font-size: 50px; margin-bottom: 10px; display: block; }
+
+        /* 彈窗樣式 (延用你的設計) */
+        #customModal {
+            display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background:white; width:85%; max-width:320px; border-radius:25px; 
+            overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+        }
+        .modal-header { padding:15px; text-align:center; color: var(--text-on-primary); font-weight:bold; background: var(--color-a); }
+        .modal-body { padding:20px; }
+        .modal-input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #eee; border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; }
+        .modal-footer { display:flex; border-top:1px solid #eee; }
+        .modal-btn { flex:1; padding:15px; border:none; background:white; color:#007aff; font-weight:bold; cursor:pointer; }
+        .modal-btn.danger { color: #ff3b30; }
+
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="app-bar">
+    <a href="index.html" class="back-btn">❮</a>
+    <h3 style="margin:0">紀念日</h3>
+    <button class="add-btn" onclick="showAddModal()">新增</button>
+</div>
+
+<div class="list-container" id="anniList">
+    </div>
+
+<div id="customModal">
+    <div class="modal-content">
+        <div id="modalHeader" class="modal-header">新增紀念日</div>
+        <div class="modal-body">
+            <input type="text" id="anniName" class="modal-input" placeholder="紀念日名稱 (如：在一起)">
+            <input type="date" id="anniDate" class="modal-input">
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal()">取消</button>
+            <button class="modal-btn" onclick="saveAnni()">儲存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let anniversaries = JSON.parse(localStorage.getItem('anniversaries') || "[]");
+
+    function applyTheme() {
+        const colorA = localStorage.getItem('theme_color_a') || '#ff6b6b';
+        const colorB = localStorage.getItem('theme_color_b') || '#ee5253';
+        document.documentElement.style.setProperty('--color-a', colorA);
+        document.documentElement.style.setProperty('--color-b', colorB);
+    }
+
+    function calculateDays(targetDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(targetDate);
+        target.setHours(0, 0, 0, 0);
+        
+        const diffInMs = today - target;
+        const days = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+        
+        return {
+            count: Math.abs(days),
+            isFuture: days < 0
+        };
+    }
+
+    function renderList() {
+        const list = document.getElementById('anniList');
+        if (anniversaries.length === 0) {
+            list.innerHTML = `<div class="empty-state"><span class="empty-icon">📅</span><p>還沒有紀念日，點擊右上角新增喵！</p></div>`;
+            return;
+        }
+
+        list.innerHTML = anniversaries.map((item, index) => {
+            const result = calculateDays(item.date);
+            return `
+                <div class="anni-card" onclick="deleteAnni(${index})">
+                    <div class="anni-info">
+                        <h4>${item.name}</h4>
+                        <p>${item.date}</p>
+                    </div>
+                    <div class="anni-days">
+                        <span class="days-unit">${result.isFuture ? '還有' : '已經'}</span>
+                        <span class="days-num">${result.count}</span>
+                        <span class="days-unit">天</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function showAddModal() {
+        document.getElementById('customModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').style.display = 'none';
+        document.getElementById('anniName').value = '';
+        document.getElementById('anniDate').value = '';
+    }
+
+    function saveAnni() {
+        const name = document.getElementById('anniName').value;
+        const date = document.getElementById('anniDate').value;
+        
+        if (!name || !date) return alert("請填寫名稱與日期喵！");
+
+        anniversaries.push({ name, date });
+        localStorage.setItem('anniversaries', JSON.stringify(anniversaries));
+        closeModal();
+        renderList();
+    }
+
+    function deleteAnni(index) {
+        if (confirm("確定要刪除這個紀念日嗎？")) {
+            anniversaries.splice(index, 1);
+            localStorage.setItem('anniversaries', JSON.stringify(anniversaries));
+            renderList();
+        }
+    }
+
+    window.onload = () => {
+        applyTheme();
+        renderList();
+    };
+</script>
+</body>
+</html>

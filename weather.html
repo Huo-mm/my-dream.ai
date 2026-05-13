@@ -6,10 +6,10 @@
     <title>C² 氣象 APP</title>
     <style>
         :root { 
-            --primary: #00bcd4; /* APP 主色 */
+            --primary: #00bcd4; /* 標題列主色 */
             --bg: #f0f4f8; 
             --text-on-primary: #ffffff;
-            /* ✨ 獨立主題色變數：預設會由 JS 從 localStorage 覆蓋 */
+            /* 氣象卡片漸層色 */
             --card-color-a: #00c6ff;
             --card-color-b: #0072ff;
         }
@@ -20,13 +20,16 @@
             display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
         }
 
-        /* 標題列 */
+        /* 標題列：背景使用漸層，更符合記憶倉庫的風格 */
         .app-bar { 
             padding: calc(env(safe-area-inset-top) + 15px) 20px 15px; 
             display: flex; align-items: center; justify-content: space-between; 
-            background: white; border-bottom: 1px solid #eee;
+            background: linear-gradient(135deg, var(--card-color-a), var(--card-color-b));
+            color: var(--text-on-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
         }
-        .app-bar a { text-decoration: none; color: var(--primary); font-size: 16px; font-weight: bold; }
+        .app-bar a { text-decoration: none; color: inherit; font-size: 16px; font-weight: bold; }
 
         .selector-area { padding: 15px; background: white; text-align: center; border-bottom: 1px solid #f2f2f2; }
         #citySelect { 
@@ -34,13 +37,13 @@
             font-size: 16px; outline: none; background-color: #f9f9f9;
             transition: border-color 0.3s;
         }
-        #citySelect:focus { border-color: var(--primary); }
+        #citySelect:focus { border-color: var(--card-color-a); }
 
-        /* ✨ 氣象卡片：現在跟著獨立的主題色變數走 */
         .weather-card {
             margin: 20px; padding: 35px 20px; border-radius: 28px;
             background: linear-gradient(135deg, var(--card-color-a) 0%, var(--card-color-b) 100%);
-            color: white; text-align: center; 
+            color: var(--text-on-primary); /* 文字顏色自動適應 */
+            text-align: center; 
             box-shadow: 0 12px 25px rgba(0,0,0,0.15);
             animation: slideIn 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.49);
         }
@@ -64,8 +67,8 @@
 </head>
 <body>
 
-<div class="app-bar">
-    <a href="index.html" id="backBtn">❮ 桌面</a>
+<div class="app-bar" id="topBar">
+    <a href="index.html">❮ 桌面</a>
     <h3 style="margin:0; font-size: 18px;">即時氣象</h3>
     <span style="width:40px"></span>
 </div>
@@ -109,6 +112,43 @@
 </div>
 
 <script>
+    // ✨ 核心邏輯：採用與記憶倉庫一致的智慧主題選色
+    function applyTheme() {
+        // 1. 讀取獨立選色（App 專屬）
+        const appColorA = localStorage.getItem('app_weather_color_a');
+        const appColorB = localStorage.getItem('app_weather_color_b');
+        
+        // 2. 讀取系統主色（來自 settings.html）
+        const systemColorA = localStorage.getItem('theme_color_a') || '#00c6ff';
+        const systemColorB = localStorage.getItem('theme_color_b') || '#0072ff';
+
+        // 3. 確定最終顏色：App 獨立色優先，沒有就用系統色
+        const finalColorA = appColorA || systemColorA;
+        const finalColorB = appColorB || systemColorB;
+
+        // 4. 注入 CSS 變數
+        document.documentElement.style.setProperty('--card-color-a', finalColorA);
+        document.documentElement.style.setProperty('--card-color-b', finalColorB);
+
+        // 5. 智慧計算文字顏色 (防止淺色背景配白色文字看不同)
+        const r = parseInt(finalColorA.slice(1,3), 16);
+        const g = parseInt(finalColorA.slice(3,5), 16);
+        const b = parseInt(finalColorA.slice(5,7), 16);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        const textColor = brightness > 180 ? '#333333' : '#ffffff';
+        document.documentElement.style.setProperty('--text-on-primary', textColor);
+
+        // 6. 同步手機頂部狀態列顏色 (meta theme-color)
+        let metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (!metaTheme) {
+            metaTheme = document.createElement('meta');
+            metaTheme.name = 'theme-color';
+            document.head.appendChild(metaTheme);
+        }
+        metaTheme.content = finalColorA;
+    }
+
+    // --- 氣象邏輯部分 ---
     const cityMap = {
         "taipei": { lat: 25.03, lon: 121.56, name: "台北市" },
         "taoyuan": { lat: 24.99, lon: 121.30, name: "桃園市" },
@@ -119,19 +159,6 @@
         "tokyo": { lat: 35.68, lon: 139.65, name: "東京" },
         "seoul": { lat: 37.56, lon: 126.97, name: "首爾" }
     };
-
-    // ✨ 注入設定介面（settings.html）的專屬主題色
-    function applyTheme() {
-        // 1. APP 標題列色
-        const weatherColor = localStorage.getItem('app_weather_color_a') || '#00bcd4';
-        document.documentElement.style.setProperty('--primary', weatherColor);
-        
-        // 2. ✨ 氣象卡片獨立主題色（連動設定頁面的 Key）
-        const cardA = localStorage.getItem('theme_color_a') || '#00c6ff';
-        const cardB = localStorage.getItem('theme_color_b') || '#0072ff';
-        document.documentElement.style.setProperty('--card-color-a', cardA);
-        document.documentElement.style.setProperty('--card-color-b', cardB);
-    }
 
     function handleSelectChange() {
         const select = document.getElementById('citySelect');
@@ -150,7 +177,6 @@
         try {
             const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=precipitation_probability`);
             const data = await res.json();
-            
             const current = data.current_weather;
             const now = new Date();
             const currentHour = now.getHours();
@@ -164,7 +190,6 @@
 
             document.getElementById('weather-content').style.display = 'block';
             document.getElementById('status').style.display = 'none';
-
             localStorage.setItem('last_city_key', document.getElementById('citySelect').value);
         } catch (e) {
             document.getElementById('status').innerText = "讀取失敗喵，請確認網路連線。";
@@ -172,10 +197,7 @@
     }
 
     function translateCondition(code) {
-        const mapping = {
-            0: "晴朗", 1: "大致晴朗", 2: "多雲", 3: "陰天",
-            45: "霧氣", 48: "霧氣", 51: "輕微毛毛雨", 61: "小雨綿綿", 80: "短暫陣雨", 95: "雷雨注意"
-        };
+        const mapping = { 0: "晴朗", 1: "大致晴朗", 2: "多雲", 3: "陰天", 45: "霧氣", 51: "輕微毛毛雨", 61: "小雨綿綿", 80: "短暫陣雨", 95: "雷雨注意" };
         return mapping[code] || "天氣晴朗";
     }
 
@@ -188,9 +210,9 @@
         }
     };
 
-    // ✨ 關鍵補丁：監聽 localStorage 變動，讓換裝變即時！
+    // 監聽儲存變動，實現即時換裝
     window.addEventListener('storage', (e) => {
-        if (e.key === 'theme_color_a' || e.key === 'theme_color_b' || e.key === 'app_weather_color_a') {
+        if (e.key.includes('color')) {
             applyTheme();
         }
     });

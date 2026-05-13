@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>備忘錄</title>
+    <title>C² 備忘錄</title>
     <style>
         /* 預設顏色，會被 JS 動態覆蓋 */
         :root { --primary: #ffc107; --bg: #f7f8fa; --text-on-primary: #333333; }
@@ -167,7 +167,7 @@
     function render() {
         const container = document.getElementById('list-container');
         if (data[currentTab].length === 0) {
-            const tip = currentTab === 'todo' ? '清單空空的，去休息吧喵～' : '還沒有任何設定紀錄喵！';
+            const tip = currentTab === 'todo' ? '清單空空的，去休息吧～' : '還沒有任何設定紀錄！';
             container.innerHTML = `
                 <div style="text-align:center; color:#ccc; margin-top:80px;">
                     <div style="font-size:50px; margin-bottom:10px;">🐾</div>
@@ -198,7 +198,7 @@
     }
 
     function confirmDelete(index) {
-        showModal("確認刪除", "確定要永久移除這條記錄嗎喵？", () => {
+        showModal("確認刪除", "確定要永久移除這條記錄嗎？", () => {
             data[currentTab].splice(index, 1);
             save();
         });

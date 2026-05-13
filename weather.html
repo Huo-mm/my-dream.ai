@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>C² 氣象 APP</title>
     <style>
-        /* 預設顏色，會被 JS 動態覆蓋 */
         :root { 
-            --primary: #00bcd4; 
+            --primary: #00bcd4; /* 標題列/App 主色 */
             --bg: #f0f4f8; 
             --text-on-primary: #ffffff;
-            --sys-color-a: #00c6ff;
-            --sys-color-b: #0072ff;
+            /* ✨ 新增：氣象卡片專屬色變數 */
+            --card-color-a: #00c6ff;
+            --card-color-b: #0072ff;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -20,7 +20,6 @@
             display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
         }
 
-        /* 標題列支援動態色 */
         .app-bar { 
             padding: calc(env(safe-area-inset-top) + 15px) 20px 15px; 
             display: flex; align-items: center; justify-content: space-between; 
@@ -35,6 +34,162 @@
             transition: border-color 0.3s;
         }
         #citySelect:focus { border-color: var(--primary); }
+
+        /* ✨ 氣象卡片：現在使用獨立的變數控制漸層 */
+        .weather-card {
+            margin: 20px; padding: 35px 20px; border-radius: 28px;
+            background: linear-gradient(135deg, var(--card-color-a) 0%, var(--card-color-b) 100%);
+            color: white; text-align: center; 
+            box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+            animation: slideIn 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+        }
+        .city-name { font-size: 26px; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px; }
+        .temp { font-size: 72px; font-weight: bold; margin: 10px 0; font-variant-numeric: tabular-nums; }
+        .condition { font-size: 20px; opacity: 0.95; font-weight: 500; }
+
+        .details { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 0 20px 20px; }
+        .info-box { 
+            background: white; padding: 18px; border-radius: 20px; text-align: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            border: 1px solid #f0f0f0;
+        }
+        .info-label { font-size: 12px; color: #999; margin-bottom: 8px; font-weight: bold; }
+        .info-value { font-size: 20px; font-weight: bold; color: #333; }
+
+        .status-msg { font-size: 14px; color: #888; margin-top: 40px; text-align: center; line-height: 1.6; }
+        
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="app-bar">
+    <a href="index.html" id="backBtn">❮ 桌面</a>
+    <h3 style="margin:0; font-size: 18px;">即時氣象</h3>
+    <span style="width:40px"></span>
+</div>
+
+<div class="selector-area">
+    <select id="citySelect" onchange="handleSelectChange()">
+        <option value="" disabled selected>請選擇想查看的城市...</option>
+        <option value="taoyuan">桃園市</option>
+        <option value="taipei">台北市</option>
+        <option value="hsinchu">新竹市</option>
+        <option value="taichung">台中市</option>
+        <option value="tainan">台南市</option>
+        <option value="kaohsiung">高雄市</option>
+        <option value="tokyo">東京 (日本)</option>
+        <option value="seoul">首爾 (韓國)</option>
+    </select>
+</div>
+
+<div id="weather-content" style="display:none; overflow-y: auto; flex: 1;">
+    <div class="weather-card">
+        <div class="city-name" id="cityName">---</div>
+        <div class="temp" id="temp">--°C</div>
+        <div class="condition" id="desc">讀取中...</div>
+    </div>
+
+    <div class="details">
+        <div class="info-box">
+            <div class="info-label">🌀 風速</div>
+            <div class="info-value" id="windspeed">-- km/h</div>
+        </div>
+        <div class="info-box">
+            <div class="info-label">☔ 降雨機率</div>
+            <div class="info-value" id="rainProbability">-- %</div>
+        </div>
+    </div>
+</div>
+
+<div id="status" class="status-msg">
+    <div style="font-size: 40px; margin-bottom: 10px;">🌤️</div>
+    今天天氣如何呢？<br>請從上方選擇地點。
+</div>
+
+<script>
+    const cityMap = {
+        "taipei": { lat: 25.03, lon: 121.56, name: "台北市" },
+        "taoyuan": { lat: 24.99, lon: 121.30, name: "桃園市" },
+        "hsinchu": { lat: 24.81, lon: 120.96, name: "新竹市" },
+        "taichung": { lat: 24.14, lon: 120.67, name: "台中市" },
+        "tainan": { lat: 22.99, lon: 120.21, name: "台南市" },
+        "kaohsiung": { lat: 22.61, lon: 120.31, name: "高雄市" },
+        "tokyo": { lat: 35.68, lon: 139.65, name: "東京" },
+        "seoul": { lat: 37.56, lon: 126.97, name: "首爾" }
+    };
+
+    // ✨ 注入獨立選色
+    function applyTheme() {
+        // 1. APP 標題與重點色
+        const weatherColor = localStorage.getItem('app_weather_color_a') || '#00bcd4';
+        document.documentElement.style.setProperty('--primary', weatherColor);
+        
+        // 2. ✨ 氣象卡片獨立主題色 (card_color_a & card_color_b)
+        // 這裡你可以設定專屬於氣象卡片的 Key
+        const cardA = localStorage.getItem('app_weather_card_a') || '#00c6ff';
+        const cardB = localStorage.getItem('app_weather_card_b') || '#0072ff';
+        document.documentElement.style.setProperty('--card-color-a', cardA);
+        document.documentElement.style.setProperty('--card-color-b', cardB);
+    }
+
+    function handleSelectChange() {
+        const select = document.getElementById('citySelect');
+        const cityKey = select.value;
+        if (cityMap[cityKey]) {
+            const city = cityMap[cityKey];
+            fetchWeather(city.lat, city.lon, city.name);
+        }
+    }
+
+    async function fetchWeather(lat, lon, displayName) {
+        document.getElementById('status').innerHTML = "🐾 正在抓取雲朵數據...";
+        document.getElementById('status').style.display = 'block';
+        document.getElementById('weather-content').style.display = 'none';
+
+        try {
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=precipitation_probability`);
+            const data = await res.json();
+            
+            const current = data.current_weather;
+            const now = new Date();
+            const currentHour = now.getHours();
+            const rainProb = data.hourly.precipitation_probability[currentHour] || 0;
+
+            document.getElementById('cityName').innerText = displayName;
+            document.getElementById('temp').innerText = `${Math.round(current.temperature)}°C`;
+            document.getElementById('desc').innerText = translateCondition(current.weathercode);
+            document.getElementById('windspeed').innerText = `${current.windspeed} km/h`;
+            document.getElementById('rainProbability').innerText = `${rainProb}%`;
+
+            document.getElementById('weather-content').style.display = 'block';
+            document.getElementById('status').style.display = 'none';
+
+            localStorage.setItem('last_city_key', document.getElementById('citySelect').value);
+        } catch (e) {
+            document.getElementById('status').innerText = "讀取失敗喵，請確認網路連線。";
+        }
+    }
+
+    function translateCondition(code) {
+        const mapping = {
+            0: "晴朗", 1: "大致晴朗", 2: "多雲", 3: "陰天",
+            45: "霧氣", 48: "霧氣", 51: "輕微毛毛雨", 61: "小雨綿綿", 80: "短暫陣雨", 95: "雷雨注意"
+        };
+        return mapping[code] || "天氣晴朗";
+    }
+
+    window.onload = () => {
+        applyTheme();
+        const lastKey = localStorage.getItem('last_city_key');
+        if (lastKey) {
+            document.getElementById('citySelect').value = lastKey;
+            handleSelectChange();
+        }
+    };
+</script>
+</body>
+</html>        #citySelect:focus { border-color: var(--primary); }
 
         /* 氣象卡片：結合系統主色漸層 */
         .weather-card {

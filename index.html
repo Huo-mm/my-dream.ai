@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-    <title>MINE Personal OS</title>
+    <title>C²s PHONE</title>
     <style>
         :root { 
             --safe-top: env(safe-area-inset-top); 
             --safe-bottom: env(safe-area-inset-bottom);
-            /* 預設 App 圖示漸層色 */
             --color-a: #4285f4; 
             --color-b: #1a2a6c; 
         }
@@ -41,7 +40,6 @@
         .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
         
-        /* App 圖示底色連動 --color-a 與 --color-b */
         .icon-box { 
             width: 55px; height: 55px; border-radius: 14px; 
             display: flex; justify-content: center; align-items: center; 
@@ -85,9 +83,10 @@
 
 <script>
     function getAppData() {
+        // ✨ 你可以在這裡直接修改 App 的顯示名稱或圖示
         const defaultApps = [
             { id: 'chat', name: 'MINE', icon: '💬', url: 'chat.html' },
-            { id: 'clock', name: '時鐘', icon: '⏰', url: 'clock.html' },
+            { id: 'clock', name: '時間', icon: '⏰', url: 'clock.html' },
             { id: 'weather', name: '天氣', icon: '☁️', url: 'weather.html' },
             { id: 'gallery', name: '相簿', icon: '🖼️', url: 'gallery.html' },
             { id: 'notes', name: '備忘錄', icon: '📝', url: 'notes.html' },
@@ -97,16 +96,29 @@
         ];
 
         let currentData = localStorage.getItem('desktop_layout_ordered');
+        
         if (currentData) {
             let parsed = JSON.parse(currentData);
-            const hasSettings = parsed.some(app => app.id === 'settings');
-            if (!hasSettings) {
-                parsed.push(defaultApps.find(a => a.id === 'settings'));
-                localStorage.setItem('desktop_layout_ordered', JSON.stringify(parsed));
-                return parsed;
-            }
-            return parsed;
+
+            // ✨ 強制同步機制：用 defaultApps 的最新名稱/圖示覆蓋舊資料，但保留排序
+            const updatedData = parsed.map(savedApp => {
+                const latest = defaultApps.find(d => d.id === savedApp.id);
+                // 如果在最新的清單裡找得到，就更新名稱和圖示
+                return latest ? { ...savedApp, name: latest.name, icon: latest.icon, url: latest.url } : savedApp;
+            });
+
+            // 檢查是否有新增加的 App（不在舊資料裡的）
+            defaultApps.forEach(defApp => {
+                if (!updatedData.some(a => a.id === defApp.id)) {
+                    updatedData.push(defApp);
+                }
+            });
+
+            // 將更新後的名稱存回快取，確保下次也是最新
+            localStorage.setItem('desktop_layout_ordered', JSON.stringify(updatedData));
+            return updatedData;
         }
+        
         return defaultApps;
     }
 
@@ -114,30 +126,21 @@
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
-    // ✨ 核心渲染邏輯：支援分區顏色
     function applyThemeAndWallpaper() {
-        // 1. 取得 App 圖示用的顏色
         const iconColorA = localStorage.getItem('theme_color_a') || '#4285f4';
         const iconColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
-        
-        // 更新 CSS 變數供 App 圖示使用
         document.documentElement.style.setProperty('--color-a', iconColorA);
         document.documentElement.style.setProperty('--color-b', iconColorB);
         
-        // 2. 處理背景邏輯
-        // 優先讀取背景專用色，若沒設定則預設跟隨 App 圖示色
         const bgColorA = localStorage.getItem('bg_color_a') || iconColorA;
         const bgColorB = localStorage.getItem('bg_color_b') || iconColorB;
-        
         const savedWallpaper = localStorage.getItem('active_wallpaper');
         const bgStyle = localStorage.getItem('bg_style') || 'gradient';
 
         if (savedWallpaper) {
-            // 如果有設定桌布，優先顯示桌布
             document.body.style.backgroundImage = `url(${savedWallpaper})`;
         } else {
             if (bgStyle === 'gradient') {
-                // 套用背景專屬的漸層
                 document.body.style.backgroundImage = `linear-gradient(180deg, ${bgColorA}, ${bgColorB})`;
             } else {
                 document.body.style.backgroundImage = 'none';

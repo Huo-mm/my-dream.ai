@@ -6,10 +6,13 @@
     <title>C² 信箱</title>
     <style>
         :root { 
-            --primary: #d44638; /* 預設紅色 */
-            --bg: #f5f5f5; 
-            --text-on-primary: #ffffff; 
-        }
+    --primary: #d44638;
+    --primary-dark: #8b1e14;
+
+    --bg: #f5f5f5; 
+    --text-on-primary: #ffffff; 
+}
+
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             margin: 0; font-family: -apple-system, sans-serif; 
@@ -18,10 +21,11 @@
         }
 
         .app-bar { 
-            padding: calc(env(safe-area-inset-top) + 15px) 15px 15px; 
-            background: var(--primary); 
-            color: var(--text-on-primary); 
-            display: flex; align-items: center; justify-content: space-between; 
+    padding: calc(env(safe-area-inset-top) + 15px) 15px 15px; 
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+
+    color: var(--text-on-primary); 
+         display: flex; align-items:       center; justify-content:  space-between; 
             z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transition: background 0.3s, color 0.3s;
         }

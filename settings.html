@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>視覺自定義中心</title>
+    <title>C² 主題自定義</title>
     <style>
         :root { --primary: #007aff; --bg: #f4f4f9; --modal-theme: #007aff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -68,7 +68,7 @@
 
 <div class="header">
     <a href="index.html" class="back-btn">❮</a>
-    <h1 style="font-size: 22px; margin: 0;">視覺自定義中心</h1>
+    <h1 style="font-size: 22px; margin: 0;">我的主題</h1>
 </div>
 
 <div class="card">
@@ -88,7 +88,7 @@
 </div>
 
 <div class="card">
-    <div class="card-title">📱 獨立 APP 選色</div>
+    <div class="card-title">📱 APP 選色</div>
     <!-- APP 列表 -->
     <div id="appPickerList"></div>
 </div>
@@ -205,7 +205,7 @@
     function closeModal() { document.getElementById('customModal').style.display = 'none'; }
 
     function confirmSync() {
-        showModal("一鍵同步", "確定要將所有 APP 與背景色統一為主色調嗎喵？", () => {
+        showModal("一鍵同步", "確定要將所有 APP 與背景色統一為主色調嗎？", () => {
             const mainColor = document.getElementById('sysColorA').value;
             apps.forEach(app => {
                 localStorage.setItem(app.key, mainColor);

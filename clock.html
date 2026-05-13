@@ -159,7 +159,7 @@
             if (alarm.active && alarm.time === currentTime) {
                 alarm.active = false; 
                 hasChanges = true;
-                mineDialog({ title: '⏰ 鬧鐘響了', message: `現在是 ${currentTime} 喵！` });
+                mineDialog({ title: '⏰ 鬧鐘響了', message: `現在是 ${currentTime} ！` });
             }
         });
 
@@ -201,7 +201,7 @@
             saveAlarms();
             renderAlarms();
         } else {
-            mineDialog({ title: '數值超出', message: '小時要在 23 內，分鐘要在 59 內喔喵。' });
+            mineDialog({ title: '數值超出', message: '小時要在 23 內，分鐘要在 59 內喔。' });
         }
     }
 

@@ -156,31 +156,56 @@
 <script>
     let emails = JSON.parse(localStorage.getItem('my_emails') || "[]");
 
-    // ✨ 修正後的強化版主題同步邏輯
+    // ✨ 終極主題同步邏輯：確保即時性與兼容性
     function applyTheme() {
-        // 【關鍵修正】將讀取的 Key 從 app_email_color_a 改為 app_mail_color_a
-        const appColor = localStorage.getItem('app_mail_color_a');
+        // 從 localStorage 獲取顏色來源
+        const appColor = localStorage.getItem('app_mail_color_a'); 
         const systemColor = localStorage.getItem('theme_color_a');
         const defaultRed = '#d44638';
 
-        // 優先權：App 獨立選色 > 系統主色 > 預設紅色
-        const finalColor = appColor || systemColor || defaultRed;
+        // 優先順序：App 獨立選色 > 系統主色 > 預設紅色
+        let finalColor = appColor || systemColor || defaultRed;
 
-        if (finalColor && finalColor.startsWith('#')) {
-            document.documentElement.style.setProperty('--primary', finalColor);
+        // 安全處理：確保顏色字串格式正確（補上 # 號）
+        if (finalColor && !finalColor.startsWith('#')) {
+            finalColor = '#' + finalColor;
+        }
 
-            // 亮度偵測：確保文字在深/淺主題色下都清晰
+        // 強制寫入 CSS 變數
+        const root = document.documentElement;
+        root.style.setProperty('--primary', finalColor);
+
+        // 智能亮度偵測：確保在「蘇打藍」等淺色主題下文字依然清晰
+        try {
             const hex = finalColor.replace('#', '');
             const r = parseInt(hex.substring(0, 2), 16);
             const g = parseInt(hex.substring(2, 4), 16);
             const b = parseInt(hex.substring(4, 6), 16);
             const brightness = (r * 299 + g * 587 + b * 114) / 1000;
 
-            // 如果背景色太亮（例如你喜歡的蘇打藍），文字自動切換為深色
+            // 亮度大於 180 為亮色調，文字改用深灰；否則維持白色
             const textColor = brightness > 180 ? '#333333' : '#ffffff';
-            document.documentElement.style.setProperty('--text-on-primary', textColor);
+            root.style.setProperty('--text-on-primary', textColor);
+            
+            // 同步更新行動端狀態列顏色
+            let metaTheme = document.querySelector('meta[name="theme-color"]');
+            if (!metaTheme) {
+                metaTheme = document.createElement('meta');
+                metaTheme.name = "theme-color";
+                document.head.appendChild(metaTheme);
+            }
+            metaTheme.content = finalColor;
+        } catch (e) {
+            root.style.setProperty('--text-on-primary', '#ffffff');
         }
     }
+
+    // 當 localStorage 有變動時即時更新（防止跨頁面設定延遲）
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'app_mail_color_a' || e.key === 'theme_color_a') {
+            applyTheme();
+        }
+    });
 
     function showModal(title, msg, onConfirm = null) {
         const modal = document.getElementById('customModal');

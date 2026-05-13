@@ -192,7 +192,7 @@
     function render() {
         const grid = document.getElementById('photoGrid');
         if (photos.length === 0) {
-            grid.innerHTML = `<div style="grid-column: span 3; text-align: center; color: #999; margin-top: 50px;">還沒有照片喵～<br>點擊下方按鈕上傳吧！</div>`;
+            grid.innerHTML = `<div style="grid-column: span 3; text-align: center; color: #999; margin-top: 50px;">還沒有照片～<br>點擊下方按鈕上傳吧！</div>`;
             return;
         }
         grid.innerHTML = photos.map((p, i) => `
@@ -257,7 +257,7 @@
             localStorage.setItem('my_photos', JSON.stringify(photos));
             render();
         } catch(e) {
-            showNotify("儲存失敗", "空間不足，請刪除一些照片喵～");
+            showNotify("儲存失敗", "空間不足，請刪除一些照片～");
         }
     }
 

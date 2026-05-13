@@ -156,12 +156,27 @@
     function closeModal() { document.getElementById('customModal').style.display = 'none'; }
 
     function saveSettings() {
-        localStorage.setItem('my_ai_key', document.getElementById('apiKey').value.trim());
-        localStorage.setItem('char_name', document.getElementById('charName').value.trim());
-        localStorage.setItem('char_prompt', document.getElementById('charPrompt').value.trim());
-        localStorage.setItem('user_about', document.getElementById('userAbout').value.trim()); // ✨ 儲存關於我
-        mineDialog({ title: '設定儲存', message: '設定已更新' });
-        setTimeout(() => location.reload(), 1000);
+        // 1. 取得並儲存數值
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const charName = document.getElementById('charName').value.trim();
+        const charPrompt = document.getElementById('charPrompt').value.trim();
+        const userAbout = document.getElementById('userAbout').value.trim();
+
+        localStorage.setItem('my_ai_key', apiKey);
+        localStorage.setItem('char_name', charName);
+        localStorage.setItem('char_prompt', charPrompt);
+        localStorage.setItem('user_about', userAbout);
+
+        // 2. 即時更新介面，不需重新整理
+        document.getElementById('display-name').innerText = charName;
+        applyTheme(); // 確保顏色如果改了也會即時變動
+        initModel();  // 重新初始化模型設定（以防換了 API Key）
+
+        // 3. 顯示成功提示
+        mineDialog({ title: '設定儲存', message: '設定已即時更新，你可以繼續編輯或點擊旁邊關閉。' });
+
+        // 💡 移除原本的 setTimeout(() => location.reload(), 1000);
+        // 這樣就不會閃退回去了！
     }
 
     function clearHistory() {

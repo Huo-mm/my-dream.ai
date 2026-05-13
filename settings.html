@@ -14,10 +14,10 @@
         }
         .header { display: flex; align-items: center; margin-bottom: 25px; }
         .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; color: #333; }
-        
+
         .card { background: white; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
         .card-title { font-size: 17px; font-weight: bold; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; color: #000; }
-        
+
         .app-row { 
             display: flex; align-items: center; justify-content: space-between; 
             padding: 14px 0; border-bottom: 1px solid #f2f2f2; 
@@ -25,13 +25,12 @@
         .app-row:last-child { border-bottom: none; }
         .app-info { display: flex; align-items: center; gap: 12px; }
         .app-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; transition: 0.3s; }
-        
-        /* ✨ 色票容器優化 */
+
         .picker-wrapper { 
             position: relative; width: 42px; height: 42px; border-radius: 50%; 
             border: 3px solid #fff; box-shadow: 0 0 0 1px #ddd;
             transition: transform 0.2s, box-shadow 0.2s;
-            background: #eee; /* 預設底色 */
+            background: #eee;
         }
         input[type="color"] {
             position: absolute; top: -10px; left: -10px; width: 64px; height: 64px; border: none; cursor: pointer; opacity: 0;
@@ -45,7 +44,6 @@
         .btn-primary { background: var(--primary); color: white; grid-column: span 2; padding: 16px; font-size: 15px; }
         .btn-danger { background: #fff1f0; color: #ff3b30; grid-column: span 2; margin-top: 10px; }
 
-        /* ✨ 系統風格彈窗 */
         #customModal {
             display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
             background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;
@@ -89,7 +87,6 @@
 
 <div class="card">
     <div class="card-title">📱 APP 選色</div>
-    <!-- APP 列表 -->
     <div id="appPickerList"></div>
 </div>
 
@@ -118,7 +115,6 @@
     </div>
 </div>
 
-<!-- 系統通知彈窗 -->
 <div id="customModal">
     <div class="modal-content">
         <div id="modalHeader" class="modal-header">標題</div>
@@ -129,16 +125,15 @@
 
 <script>
     const apps = [
-        { id: 'AI', name: 'AI 助手', icon: '💬', key: 'app_ai_color_a' },
-        { id: 'Clock', name: '時鐘', icon: '⏰', key: 'app_clock_color_a' },
-        { id: 'Gallery', name: '相簿', icon: '🖼️', key: 'app_gallery_color_a' },
-        { id: 'Notes', name: '備忘錄', icon: '📝', key: 'app_notes_color_a' },
-        { id: 'Weather', name: '天氣', icon: '☁️', key: 'app_weather_color_a' },
-        { id: 'Mail', name: '信箱', icon: '✉️', key: 'app_mail_color_a' },
-        { id: 'Archive', name: '記憶倉庫', icon: '📦', key: 'app_archive_color_a' }
+        { id: 'AI', name: 'AI 助手', icon: '💬', key: 'app_ai_color_a', def: '#4285f4' },
+        { id: 'Clock', name: '時鐘', icon: '⏰', key: 'app_clock_color_a', def: '#ff9500' },
+        { id: 'Gallery', name: '相簿', icon: '🖼️', key: 'app_gallery_color_a', def: '#4cd964' },
+        { id: 'Notes', name: '備忘錄', icon: '📝', key: 'app_notes_color_a', def: '#ffcc00' },
+        { id: 'Weather', name: '天氣', icon: '☁️', key: 'app_weather_color_a', def: '#5ac8fa' },
+        { id: 'Mail', name: '信箱', icon: '✉️', key: 'app_mail_color_a', def: '#d44638' },
+        { id: 'Archive', name: '記憶倉庫', icon: '📦', key: 'app_archive_color_a', def: '#5856d6' }
     ];
 
-    // 初始化 APP 列表介面
     function initAppList() {
         const container = document.getElementById('appPickerList');
         container.innerHTML = apps.map(app => `
@@ -154,28 +149,27 @@
         `).join('');
     }
 
-    // ✨ 核心：更新所有色票與圖示的視覺顯示
     function refreshUI() {
         const modalColor = localStorage.getItem('theme_modal_color') || '#007aff';
         const primaryColor = localStorage.getItem('theme_color_a') || '#007aff';
-        
+
         document.documentElement.style.setProperty('--primary', primaryColor);
         document.documentElement.style.setProperty('--modal-theme', modalColor);
 
-        // 更新所有色票 Wrapper 的顏色
         const allInputs = document.querySelectorAll('input[type="color"]');
         allInputs.forEach(input => {
             const wrapper = document.getElementById('pw-' + input.id);
             if(wrapper) wrapper.style.backgroundColor = input.value;
         });
 
-        // 更新 APP 圖示背景
         apps.forEach(app => {
-            const val = document.getElementById('color' + app.id).value;
-            document.getElementById('icon' + app.id).style.background = val;
+            const el = document.getElementById('color' + app.id);
+            if(el) {
+                document.getElementById('icon' + app.id).style.background = el.value;
+            }
         });
-        
-        document.getElementById('syncBtn').style.background = primaryColor;
+
+        if(document.getElementById('syncBtn')) document.getElementById('syncBtn').style.background = primaryColor;
     }
 
     function saveLive(key, value) {
@@ -183,13 +177,12 @@
         refreshUI();
     }
 
-    // ✨ 系統彈窗
     function showModal(title, msg, onConfirm = null) {
         const modal = document.getElementById('customModal');
         document.getElementById('modalHeader').innerText = title;
         document.getElementById('modalBody').innerText = msg;
         const footer = document.getElementById('modalFooter');
-        
+
         if (onConfirm) {
             footer.innerHTML = `
                 <button class="modal-btn" style="color:#888" onclick="closeModal()">取消</button>
@@ -209,7 +202,8 @@
             const mainColor = document.getElementById('sysColorA').value;
             apps.forEach(app => {
                 localStorage.setItem(app.key, mainColor);
-                document.getElementById('color' + app.id).value = mainColor;
+                const input = document.getElementById('color' + app.id);
+                if(input) input.value = mainColor;
             });
             localStorage.setItem('theme_modal_color', mainColor);
             localStorage.setItem('bg_color_a', mainColor);
@@ -234,16 +228,25 @@
 
     window.onload = () => {
         initAppList();
-        
-        // 載入數值
-        document.getElementById('sysColorA').value = localStorage.getItem('theme_color_a') || '#4285f4';
+
+        // 1. 先抓取全局主色作為後備參考
+        const globalMainColor = localStorage.getItem('theme_color_a') || '#4285f4';
+
+        // 2. 載入系統基礎數值
+        document.getElementById('sysColorA').value = globalMainColor;
         document.getElementById('sysColorB').value = localStorage.getItem('theme_color_b') || '#1a2a6c';
-        document.getElementById('colorModal').value = localStorage.getItem('theme_modal_color') || '#4285f4';
-        document.getElementById('bgColorA').value = localStorage.getItem('bg_color_a') || '#4285f4';
+        document.getElementById('colorModal').value = localStorage.getItem('theme_modal_color') || globalMainColor;
+        document.getElementById('bgColorA').value = localStorage.getItem('bg_color_a') || globalMainColor;
         document.getElementById('bgColorB').value = localStorage.getItem('bg_color_b') || '#1a2a6c';
-        
+
+        // 3. ✨ 核心邏輯：APP 選色載入
         apps.forEach(app => {
-            document.getElementById('color' + app.id).value = localStorage.getItem(app.key) || '#888';
+            const input = document.getElementById('color' + app.id);
+            if(input) {
+                // 優先權：獨立存檔 > 系統全局主色 > App 初始預設色
+                const saved = localStorage.getItem(app.key);
+                input.value = saved || globalMainColor || app.def;
+            }
         });
 
         refreshUI();

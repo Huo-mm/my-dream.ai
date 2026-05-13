@@ -116,42 +116,29 @@
     let anniversaries = JSON.parse(localStorage.getItem('anniversaries') || "[]");
     let editingIndex = -1;
 
-    // ✨ 終極主題同步邏輯：包含漸層與裝置顏色影響
+    // ✨ 修正後的終極主題同步邏輯
     function applyTheme() {
-        const appColorA = localStorage.getItem('app_anniversary_color_a');
-        const systemColorA = localStorage.getItem('theme_color_a') || '#ff6b6b';
-        const systemColorB = localStorage.getItem('theme_color_b') || '#ee5253';
+        // 1. 抓取顏色數據
+        const appColorA = localStorage.getItem('app_anniversary_color_a'); // 紀念日獨立色
+        const systemColorA = localStorage.getItem('theme_color_a') || '#ff6b6b'; // 系統主色 A
+        const systemColorB = localStorage.getItem('theme_color_b') || '#ee5253'; // 系統主色 B
+        const modalSetting = localStorage.getItem('theme_modal_color'); // 彈窗專用色
         
-        // 抓取彈窗專用色
-        const modalSetting = localStorage.getItem('theme_modal_color');
-
-        // 計算最終顏色
+        // 2. 核心邏輯：如果有獨立色，漸層 = [獨立色] 到 [系統主色 B]
         let finalColorA = appColorA || systemColorA;
-        let finalColorB = systemColorB;
+        let finalColorB = systemColorB; 
 
-        // 如果有獨立選色，我們自動幫它生成一個深色漸層（或是你之後有 app_anniversary_color_b 也可以加上）
-        if (appColorA) {
-            finalColorB = appColorA; // 這裡可以微調，或直接連動
-        }
+        // 安全檢查：確保顏色字串開頭有 #
+        if (finalColorA && !finalColorA.startsWith('#')) finalColorA = '#' + finalColorA;
+        if (finalColorB && !finalColorB.startsWith('#')) finalColorB = '#' + finalColorB;
 
+        // 3. 套用到 CSS 變數
         const root = document.documentElement;
         root.style.setProperty('--primary', finalColorA);
         root.style.setProperty('--primary-dark', finalColorB);
         root.style.setProperty('--modal-theme', modalSetting || finalColorA);
 
-        // 亮度偵測以調整文字顏色
-        try {
-            const hex = finalColorA.replace('#', '');
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-            root.style.setProperty('--text-on-primary', brightness > 180 ? '#333333' : '#ffffff');
-        } catch (e) {
-            root.style.setProperty('--text-on-primary', '#ffffff');
-        }
-
-        // ✨ 影響裝置網頁顏色 (Android 狀態列)
+        // 4. 影響裝置狀態列顏色 (Android / iOS PWA)
         let metaTheme = document.querySelector('meta[name="theme-color"]');
         if (!metaTheme) {
             metaTheme = document.createElement('meta');
@@ -159,14 +146,31 @@
             document.head.appendChild(metaTheme);
         }
         metaTheme.content = finalColorA;
+
+        // 5. 自動判斷文字顏色亮度
+        const brightness = getBrightness(finalColorA);
+        root.style.setProperty('--text-on-primary', brightness > 180 ? '#333333' : '#ffffff');
+    }
+
+    // 亮度偵測工具
+    function getBrightness(hex) {
+        try {
+            const h = hex.replace('#', '');
+            const r = parseInt(h.substring(0, 2), 16);
+            const g = parseInt(h.substring(2, 4), 16);
+            const b = parseInt(h.substring(4, 6), 16);
+            return (r * 299 + g * 587 + b * 114) / 1000;
+        } catch (e) { return 0; }
     }
 
     // 監聽 storage 變動
     window.addEventListener('storage', (e) => {
-        if (e.key === 'app_anniversary_color_a' || e.key === 'theme_color_a') {
+        if (e.key === 'app_anniversary_color_a' || e.key === 'theme_color_a' || e.key === 'theme_color_b') {
             applyTheme();
         }
     });
+
+    // --- 以下為功能邏輯 ---
 
     function calculateDays(targetDate) {
         const today = new Date();

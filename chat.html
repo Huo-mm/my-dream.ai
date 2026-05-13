@@ -173,7 +173,7 @@
         initModel();  // 重新初始化模型設定（以防換了 API Key）
 
         // 3. 顯示成功提示
-        mineDialog({ title: '設定儲存', message: '設定已即時更新，你可以繼續編輯或點擊旁邊關閉。' });
+        mineDialog({ title: '設定儲存', message: '設定已存檔更新。' });
 
         // 💡 移除原本的 setTimeout(() => location.reload(), 1000);
         // 這樣就不會閃退回去了！
@@ -273,7 +273,7 @@ ${userAbout}
                     let emails = JSON.parse(localStorage.getItem('my_emails') || "[]");
                     emails.unshift({ ...mailObj, time: new Date().toLocaleString() });
                     localStorage.setItem('my_emails', JSON.stringify(emails));
-                    showToast(`📬 ${charName} 已為你發送郵件`);
+                    showToast(`📬 ${charName} 你收到了一封郵件`);
                 } catch(e) { console.error("Mail JSON Error", e); }
             }
 

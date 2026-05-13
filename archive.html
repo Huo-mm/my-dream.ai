@@ -137,6 +137,18 @@
         const brightness = (r * 299 + g * 587 + b * 114) / 1000;
         const textColor = brightness > 180 ? '#333333' : '#ffffff';
         document.documentElement.style.setProperty('--text-on-primary', textColor);
+
+// ✨ 同步手機裝置介面顏色
+let metaTheme = document.querySelector('meta[name="theme-color"]');
+
+if (!metaTheme) {
+    metaTheme = document.createElement('meta');
+    metaTheme.name = 'theme-color';
+    document.head.appendChild(metaTheme);
+}
+
+// 使用主色 A 當作系統主題色
+metaTheme.content = finalColorA;
     }
 
     // 💡 萬用彈窗函數

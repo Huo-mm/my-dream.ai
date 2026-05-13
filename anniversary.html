@@ -10,7 +10,7 @@
             --color-b: #ee5253;
             --text-on-primary: #ffffff;
             --bg: #f8f9fa;
-            --modal-theme: #ff6b6b; /* 新增彈窗主題色變數 */
+            --modal-theme: #ff6b6b;
         }
         body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
 
@@ -58,7 +58,6 @@
             background:white; width:85%; max-width:320px; border-radius:25px; 
             overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
         }
-        /* header 顏色改為讀取自定義主題變數 */
         .modal-header { padding:15px; text-align:center; color: white; font-weight:bold; background: var(--modal-theme); }
         .modal-body { padding:20px; }
         .modal-input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #eee; border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; }
@@ -83,28 +82,35 @@
 <div id="customModal">
     <div class="modal-content">
         <div id="modalHeader" class="modal-header">新增紀念日</div>
-        <div id="modalBody" class="modal-body">
-            </div>
+        <div id="modalBody" class="modal-body"></div>
         <div class="modal-footer" id="modalFooter"></div>
     </div>
 </div>
 
 <script>
     let anniversaries = JSON.parse(localStorage.getItem('anniversaries') || "[]");
-    let editingIndex = -1; // 記錄目前正在編輯哪一個項目
+    let editingIndex = -1;
 
     function applyTheme() {
-        // 抓取基礎主題色
-        const colorA = localStorage.getItem('theme_color_a') || '#ff6b6b';
-        const colorB = localStorage.getItem('theme_color_b') || '#ee5253';
+        // 1. 抓取紀念日獨立選色 (Key 是 app_anniversary_color_a)
+        const anniversaryColor = localStorage.getItem('app_anniversary_color_a');
         
-        // ✨ 新增：抓取系統自定義彈窗色 (theme_modal_color)
-        // 優先權：自定義彈窗色 > App 獨立色 A
-        const modalColor = localStorage.getItem('theme_modal_color') || colorA;
+        // 2. 抓取系統通用主色作為備用
+        const sysColorA = localStorage.getItem('theme_color_a') || '#ff6b6b';
+        const sysColorB = localStorage.getItem('theme_color_b') || '#ee5253';
 
-        document.documentElement.style.setProperty('--color-a', colorA);
-        document.documentElement.style.setProperty('--color-b', colorB);
-        document.documentElement.style.setProperty('--modal-theme', modalColor);
+        // 3. 確定最終使用的 App 主色 (優先使用獨立色)
+        const finalColorA = anniversaryColor || sysColorA;
+        // 如果有獨立色，我們讓漸層稍微變深一點點作為 Color B
+        const finalColorB = anniversaryColor ? anniversaryColor : sysColorB;
+
+        // 4. 抓取自定義主題通知顏色 (theme_modal_color)
+        const modalThemeColor = localStorage.getItem('theme_modal_color') || finalColorA;
+
+        // 套用 CSS 變數
+        document.documentElement.style.setProperty('--color-a', finalColorA);
+        document.documentElement.style.setProperty('--color-b', finalColorB);
+        document.documentElement.style.setProperty('--modal-theme', modalThemeColor);
     }
 
     function calculateDays(targetDate) {
@@ -112,14 +118,9 @@
         today.setHours(0, 0, 0, 0);
         const target = new Date(targetDate);
         target.setHours(0, 0, 0, 0);
-        
         const diffInMs = today - target;
         const days = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-        
-        return {
-            count: Math.abs(days),
-            isFuture: days < 0
-        };
+        return { count: Math.abs(days), isFuture: days < 0 };
     }
 
     function renderList() {
@@ -128,7 +129,6 @@
             list.innerHTML = `<div class="empty-state"><span class="empty-icon">📅</span><p>還沒有紀念日，點擊右上角新增喵！</p></div>`;
             return;
         }
-
         list.innerHTML = anniversaries.map((item, index) => {
             const result = calculateDays(item.date);
             return `
@@ -147,13 +147,12 @@
         }).join('');
     }
 
-    // 點擊卡片彈出選單
     function handleItemClick(index) {
         const item = anniversaries[index];
         const modal = document.getElementById('customModal');
         document.getElementById('modalHeader').innerText = item.name;
-        document.getElementById('modalBody').innerHTML = `<p style="text-align:center; color:#666;">請選擇操作：</p>`;
-        
+        document.getElementById('modalBody').innerHTML = `<p style="text-align:center; color:#666; margin: 10px 0;">請選擇操作：</p>`;
+
         document.getElementById('modalFooter').innerHTML = `
             <button class="modal-btn danger" onclick="deleteAnni(${index})">刪除</button>
             <button class="modal-btn" onclick="showEditModal(${index})">編輯</button>
@@ -174,13 +173,11 @@
         const item = anniversaries[index];
         document.getElementById('modalHeader').innerText = "編輯紀念日";
         setupInputModal();
-        
         document.getElementById('anniName').value = item.name;
         document.getElementById('anniDate').value = item.date;
         document.getElementById('customModal').style.display = 'flex';
     }
 
-    // 初始化彈窗內的輸入介面與按鈕
     function setupInputModal() {
         document.getElementById('modalBody').innerHTML = `
             <input type="text" id="anniName" class="modal-input" placeholder="紀念日名稱">
@@ -200,24 +197,18 @@
     function saveAnni() {
         const name = document.getElementById('anniName').value;
         const date = document.getElementById('anniDate').value;
-        
         if (!name || !date) return alert("請填寫名稱與日期喵！");
-
         if (editingIndex > -1) {
-            // 修改模式
             anniversaries[editingIndex] = { name, date };
         } else {
-            // 新增模式
             anniversaries.push({ name, date });
         }
-
         localStorage.setItem('anniversaries', JSON.stringify(anniversaries));
         closeModal();
         renderList();
     }
 
     function deleteAnni(index) {
-        // 使用系統彈窗再次確認
         if (confirm("確定要刪除「" + anniversaries[index].name + "」嗎？")) {
             anniversaries.splice(index, 1);
             localStorage.setItem('anniversaries', JSON.stringify(anniversaries));

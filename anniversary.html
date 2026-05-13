@@ -10,6 +10,7 @@
             --color-b: #ee5253;
             --text-on-primary: #ffffff;
             --bg: #f8f9fa;
+            --modal-theme: #ff6b6b; /* 新增彈窗主題色變數 */
         }
         body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
 
@@ -21,7 +22,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 10;
         }
         .back-btn { text-decoration: none; color: inherit; font-size: 20px; }
-        .add-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 12px; border-radius: 20px; font-size: 14px; }
+        .add-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 12px; border-radius: 20px; font-size: 14px; cursor: pointer; }
 
         /* 列表容器 */
         .list-container { flex: 1; overflow-y: auto; padding: 15px; }
@@ -30,7 +31,10 @@
             display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: relative;
             animation: slideUp 0.4s ease-out forwards;
+            cursor: pointer;
         }
+        .anni-card:active { transform: scale(0.98); background: #fafafa; }
+
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         .anni-info h4 { margin: 0 0 5px 0; font-size: 18px; color: #333; }
@@ -44,7 +48,7 @@
         .empty-state { text-align: center; color: #ccc; margin-top: 100px; }
         .empty-icon { font-size: 50px; margin-bottom: 10px; display: block; }
 
-        /* 彈窗樣式 (延用你的設計) */
+        /* 彈窗樣式 */
         #customModal {
             display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
             background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;
@@ -54,11 +58,13 @@
             background:white; width:85%; max-width:320px; border-radius:25px; 
             overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
         }
-        .modal-header { padding:15px; text-align:center; color: var(--text-on-primary); font-weight:bold; background: var(--color-a); }
+        /* header 顏色改為讀取自定義主題變數 */
+        .modal-header { padding:15px; text-align:center; color: white; font-weight:bold; background: var(--modal-theme); }
         .modal-body { padding:20px; }
         .modal-input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #eee; border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; }
         .modal-footer { display:flex; border-top:1px solid #eee; }
-        .modal-btn { flex:1; padding:15px; border:none; background:white; color:#007aff; font-weight:bold; cursor:pointer; }
+        .modal-btn { flex:1; padding:15px; border:none; background:white; color: var(--modal-theme); font-weight:bold; cursor:pointer; }
+        .modal-btn:last-child { border-left: 1px solid #eee; }
         .modal-btn.danger { color: #ff3b30; }
 
         @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -72,31 +78,33 @@
     <button class="add-btn" onclick="showAddModal()">新增</button>
 </div>
 
-<div class="list-container" id="anniList">
-    </div>
+<div class="list-container" id="anniList"></div>
 
 <div id="customModal">
     <div class="modal-content">
         <div id="modalHeader" class="modal-header">新增紀念日</div>
-        <div class="modal-body">
-            <input type="text" id="anniName" class="modal-input" placeholder="紀念日名稱 (如：在一起)">
-            <input type="date" id="anniDate" class="modal-input">
-        </div>
-        <div class="modal-footer">
-            <button class="modal-btn" onclick="closeModal()">取消</button>
-            <button class="modal-btn" onclick="saveAnni()">儲存</button>
-        </div>
+        <div id="modalBody" class="modal-body">
+            </div>
+        <div class="modal-footer" id="modalFooter"></div>
     </div>
 </div>
 
 <script>
     let anniversaries = JSON.parse(localStorage.getItem('anniversaries') || "[]");
+    let editingIndex = -1; // 記錄目前正在編輯哪一個項目
 
     function applyTheme() {
+        // 抓取基礎主題色
         const colorA = localStorage.getItem('theme_color_a') || '#ff6b6b';
         const colorB = localStorage.getItem('theme_color_b') || '#ee5253';
+        
+        // ✨ 新增：抓取系統自定義彈窗色 (theme_modal_color)
+        // 優先權：自定義彈窗色 > App 獨立色 A
+        const modalColor = localStorage.getItem('theme_modal_color') || colorA;
+
         document.documentElement.style.setProperty('--color-a', colorA);
         document.documentElement.style.setProperty('--color-b', colorB);
+        document.documentElement.style.setProperty('--modal-theme', modalColor);
     }
 
     function calculateDays(targetDate) {
@@ -124,7 +132,7 @@
         list.innerHTML = anniversaries.map((item, index) => {
             const result = calculateDays(item.date);
             return `
-                <div class="anni-card" onclick="deleteAnni(${index})">
+                <div class="anni-card" onclick="handleItemClick(${index})">
                     <div class="anni-info">
                         <h4>${item.name}</h4>
                         <p>${item.date}</p>
@@ -139,14 +147,54 @@
         }).join('');
     }
 
+    // 點擊卡片彈出選單
+    function handleItemClick(index) {
+        const item = anniversaries[index];
+        const modal = document.getElementById('customModal');
+        document.getElementById('modalHeader').innerText = item.name;
+        document.getElementById('modalBody').innerHTML = `<p style="text-align:center; color:#666;">請選擇操作：</p>`;
+        
+        document.getElementById('modalFooter').innerHTML = `
+            <button class="modal-btn danger" onclick="deleteAnni(${index})">刪除</button>
+            <button class="modal-btn" onclick="showEditModal(${index})">編輯</button>
+            <button class="modal-btn" style="color:#888" onclick="closeModal()">取消</button>
+        `;
+        modal.style.display = 'flex';
+    }
+
     function showAddModal() {
+        editingIndex = -1;
+        document.getElementById('modalHeader').innerText = "新增紀念日";
+        setupInputModal();
         document.getElementById('customModal').style.display = 'flex';
+    }
+
+    function showEditModal(index) {
+        editingIndex = index;
+        const item = anniversaries[index];
+        document.getElementById('modalHeader').innerText = "編輯紀念日";
+        setupInputModal();
+        
+        document.getElementById('anniName').value = item.name;
+        document.getElementById('anniDate').value = item.date;
+        document.getElementById('customModal').style.display = 'flex';
+    }
+
+    // 初始化彈窗內的輸入介面與按鈕
+    function setupInputModal() {
+        document.getElementById('modalBody').innerHTML = `
+            <input type="text" id="anniName" class="modal-input" placeholder="紀念日名稱">
+            <input type="date" id="anniDate" class="modal-input">
+        `;
+        document.getElementById('modalFooter').innerHTML = `
+            <button class="modal-btn" style="color:#888" onclick="closeModal()">取消</button>
+            <button class="modal-btn" onclick="saveAnni()">儲存</button>
+        `;
     }
 
     function closeModal() {
         document.getElementById('customModal').style.display = 'none';
-        document.getElementById('anniName').value = '';
-        document.getElementById('anniDate').value = '';
+        editingIndex = -1;
     }
 
     function saveAnni() {
@@ -155,16 +203,25 @@
         
         if (!name || !date) return alert("請填寫名稱與日期喵！");
 
-        anniversaries.push({ name, date });
+        if (editingIndex > -1) {
+            // 修改模式
+            anniversaries[editingIndex] = { name, date };
+        } else {
+            // 新增模式
+            anniversaries.push({ name, date });
+        }
+
         localStorage.setItem('anniversaries', JSON.stringify(anniversaries));
         closeModal();
         renderList();
     }
 
     function deleteAnni(index) {
-        if (confirm("確定要刪除這個紀念日嗎？")) {
+        // 使用系統彈窗再次確認
+        if (confirm("確定要刪除「" + anniversaries[index].name + "」嗎？")) {
             anniversaries.splice(index, 1);
             localStorage.setItem('anniversaries', JSON.stringify(anniversaries));
+            closeModal();
             renderList();
         }
     }

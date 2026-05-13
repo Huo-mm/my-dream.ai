@@ -92,7 +92,11 @@
             overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
             box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
-        .modal-header { padding:18px; text-align:center; color:var(--text-on-primary); background: var(--primary); font-weight:bold; font-size: 16px; transition: background 0.3s, color 0.3s; }
+        .modal-header {
+    padding:18px;
+    text-align:center;
+    color:var(--text-on-primary);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark)); font-weight:bold; font-size: 16px; transition: background 0.3s, color 0.3s; }
         .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; line-height:1.5; }
         .modal-footer { display:flex; border-top:1px solid #eee; }
         .modal-btn { flex:1; padding:16px; border:none; background:white; color:var(--primary); font-weight:bold; font-size:16px; cursor:pointer; transition: color 0.3s; }

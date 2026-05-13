@@ -2,27 +2,39 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <title>C² 紀念日</title>
     <style>
         :root { 
-            --color-a: #ff6b6b; 
-            --color-b: #ee5253;
+            --primary: #ff6b6b; 
+            --primary-dark: #ee5253;
             --text-on-primary: #ffffff;
             --bg: #f8f9fa;
             --modal-theme: #ff6b6b;
         }
-        body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            margin: 0; font-family: -apple-system, sans-serif; 
+            background: var(--bg); display: flex; flex-direction: column; 
+            height: 100dvh; overflow: hidden; 
+        }
 
-        /* App Bar */
+        /* App Bar 升級為漸層色 */
         .app-bar { 
             padding: calc(env(safe-area-inset-top) + 15px) 15px 15px 15px; 
-            background: linear-gradient(135deg, var(--color-a), var(--color-b)); 
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
             color: var(--text-on-primary); display: flex; align-items: center; justify-content: space-between;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 10;
+            transition: background 0.3s, color 0.3s;
         }
-        .back-btn { text-decoration: none; color: inherit; font-size: 20px; }
-        .add-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 12px; border-radius: 20px; font-size: 14px; cursor: pointer; }
+        .back-btn { text-decoration: none; color: inherit; font-size: 18px; font-weight: 500; }
+        .add-btn { 
+            background: rgba(255,255,255,0.2); border: none; color: white; 
+            padding: 6px 14px; border-radius: 20px; font-size: 14px; cursor: pointer; 
+            transition: background 0.2s;
+        }
+        .add-btn:active { background: rgba(255,255,255,0.4); }
 
         /* 列表容器 */
         .list-container { flex: 1; overflow-y: auto; padding: 15px; }
@@ -32,8 +44,10 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: relative;
             animation: slideUp 0.4s ease-out forwards;
             cursor: pointer;
+            border-left: 5px solid var(--primary); /* 側邊裝飾色 */
+            transition: transform 0.2s, background 0.2s;
         }
-        .anni-card:active { transform: scale(0.98); background: #fafafa; }
+        .anni-card:active { transform: scale(0.97); background: #fafafa; }
 
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -41,28 +55,39 @@
         .anni-info p { margin: 0; font-size: 13px; color: #999; }
         
         .anni-days { text-align: right; }
-        .days-num { font-size: 28px; font-weight: bold; color: var(--color-a); display: block; }
+        .days-num { font-size: 28px; font-weight: bold; color: var(--primary); display: block; transition: color 0.3s; }
         .days-unit { font-size: 12px; color: #888; }
 
         /* 空狀態 */
         .empty-state { text-align: center; color: #ccc; margin-top: 100px; }
-        .empty-icon { font-size: 50px; margin-bottom: 10px; display: block; }
+        .empty-icon { font-size: 60px; margin-bottom: 15px; display: block; }
 
-        /* 彈窗樣式 */
+        /* 彈窗樣式升級漸層 */
         #customModal {
             display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
             background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;
             backdrop-filter: blur(5px);
         }
         .modal-content {
-            background:white; width:85%; max-width:320px; border-radius:25px; 
+            background:white; width:85%; max-width:320px; border-radius:28px; 
             overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
-        .modal-header { padding:15px; text-align:center; color: white; font-weight:bold; background: var(--modal-theme); }
-        .modal-body { padding:20px; }
-        .modal-input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #eee; border-radius: 10px; box-sizing: border-box; outline: none; font-size: 16px; }
+        .modal-header { 
+            padding:18px; text-align:center; color: var(--text-on-primary); font-weight:bold; 
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
+            font-size: 16px; transition: background 0.3s; 
+        }
+        .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; line-height:1.5; }
+        .modal-input { 
+            width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #eee; 
+            border-radius: 12px; box-sizing: border-box; outline: none; font-size: 16px; background: #f9f9f9;
+        }
         .modal-footer { display:flex; border-top:1px solid #eee; }
-        .modal-btn { flex:1; padding:15px; border:none; background:white; color: var(--modal-theme); font-weight:bold; cursor:pointer; }
+        .modal-btn { 
+            flex:1; padding:16px; border:none; background:white; color: var(--primary); 
+            font-weight:bold; cursor:pointer; font-size:16px; transition: color 0.3s;
+        }
         .modal-btn:last-child { border-left: 1px solid #eee; }
         .modal-btn.danger { color: #ff3b30; }
 
@@ -71,9 +96,9 @@
 </head>
 <body>
 
-<div class="app-bar">
-    <a href="index.html" class="back-btn">❮</a>
-    <h3 style="margin:0">紀念日</h3>
+<div class="app-bar" id="appBar">
+    <a href="index.html" class="back-btn">❮ 桌面</a>
+    <span style="font-weight: bold;">紀念日</span>
     <button class="add-btn" onclick="showAddModal()">新增</button>
 </div>
 
@@ -81,7 +106,7 @@
 
 <div id="customModal">
     <div class="modal-content">
-        <div id="modalHeader" class="modal-header">新增紀念日</div>
+        <div id="modalHeader" class="modal-header">通知</div>
         <div id="modalBody" class="modal-body"></div>
         <div class="modal-footer" id="modalFooter"></div>
     </div>
@@ -91,27 +116,57 @@
     let anniversaries = JSON.parse(localStorage.getItem('anniversaries') || "[]");
     let editingIndex = -1;
 
+    // ✨ 終極主題同步邏輯：包含漸層與裝置顏色影響
     function applyTheme() {
-        // 1. 抓取紀念日獨立選色 (Key 是 app_anniversary_color_a)
-        const anniversaryColor = localStorage.getItem('app_anniversary_color_a');
+        const appColorA = localStorage.getItem('app_anniversary_color_a');
+        const systemColorA = localStorage.getItem('theme_color_a') || '#ff6b6b';
+        const systemColorB = localStorage.getItem('theme_color_b') || '#ee5253';
         
-        // 2. 抓取系統通用主色作為備用
-        const sysColorA = localStorage.getItem('theme_color_a') || '#ff6b6b';
-        const sysColorB = localStorage.getItem('theme_color_b') || '#ee5253';
+        // 抓取彈窗專用色
+        const modalSetting = localStorage.getItem('theme_modal_color');
 
-        // 3. 確定最終使用的 App 主色 (優先使用獨立色)
-        const finalColorA = anniversaryColor || sysColorA;
-        // 如果有獨立色，我們讓漸層稍微變深一點點作為 Color B
-        const finalColorB = anniversaryColor ? anniversaryColor : sysColorB;
+        // 計算最終顏色
+        let finalColorA = appColorA || systemColorA;
+        let finalColorB = systemColorB;
 
-        // 4. 抓取自定義主題通知顏色 (theme_modal_color)
-        const modalThemeColor = localStorage.getItem('theme_modal_color') || finalColorA;
+        // 如果有獨立選色，我們自動幫它生成一個深色漸層（或是你之後有 app_anniversary_color_b 也可以加上）
+        if (appColorA) {
+            finalColorB = appColorA; // 這裡可以微調，或直接連動
+        }
 
-        // 套用 CSS 變數
-        document.documentElement.style.setProperty('--color-a', finalColorA);
-        document.documentElement.style.setProperty('--color-b', finalColorB);
-        document.documentElement.style.setProperty('--modal-theme', modalThemeColor);
+        const root = document.documentElement;
+        root.style.setProperty('--primary', finalColorA);
+        root.style.setProperty('--primary-dark', finalColorB);
+        root.style.setProperty('--modal-theme', modalSetting || finalColorA);
+
+        // 亮度偵測以調整文字顏色
+        try {
+            const hex = finalColorA.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            root.style.setProperty('--text-on-primary', brightness > 180 ? '#333333' : '#ffffff');
+        } catch (e) {
+            root.style.setProperty('--text-on-primary', '#ffffff');
+        }
+
+        // ✨ 影響裝置網頁顏色 (Android 狀態列)
+        let metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (!metaTheme) {
+            metaTheme = document.createElement('meta');
+            metaTheme.name = 'theme-color';
+            document.head.appendChild(metaTheme);
+        }
+        metaTheme.content = finalColorA;
     }
+
+    // 監聽 storage 變動
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'app_anniversary_color_a' || e.key === 'theme_color_a') {
+            applyTheme();
+        }
+    });
 
     function calculateDays(targetDate) {
         const today = new Date();
@@ -151,7 +206,7 @@
         const item = anniversaries[index];
         const modal = document.getElementById('customModal');
         document.getElementById('modalHeader').innerText = item.name;
-        document.getElementById('modalBody').innerHTML = `<p style="text-align:center; color:#666; margin: 10px 0;">請選擇操作：</p>`;
+        document.getElementById('modalBody').innerHTML = `<p style="text-align:center; color:#666; margin: 10px 0;">你想對這段紀念日做什麼？</p>`;
 
         document.getElementById('modalFooter').innerHTML = `
             <button class="modal-btn danger" onclick="deleteAnni(${index})">刪除</button>
@@ -180,7 +235,7 @@
 
     function setupInputModal() {
         document.getElementById('modalBody').innerHTML = `
-            <input type="text" id="anniName" class="modal-input" placeholder="紀念日名稱">
+            <input type="text" id="anniName" class="modal-input" placeholder="例如：在一起、生日">
             <input type="date" id="anniDate" class="modal-input">
         `;
         document.getElementById('modalFooter').innerHTML = `
@@ -195,9 +250,10 @@
     }
 
     function saveAnni() {
-        const name = document.getElementById('anniName').value;
+        const name = document.getElementById('anniName').value.trim();
         const date = document.getElementById('anniDate').value;
-        if (!name || !date) return alert("請填寫名稱與日期喵！");
+        if (!name || !date) return;
+
         if (editingIndex > -1) {
             anniversaries[editingIndex] = { name, date };
         } else {
@@ -209,12 +265,10 @@
     }
 
     function deleteAnni(index) {
-        if (confirm("確定要刪除「" + anniversaries[index].name + "」嗎？")) {
-            anniversaries.splice(index, 1);
-            localStorage.setItem('anniversaries', JSON.stringify(anniversaries));
-            closeModal();
-            renderList();
-        }
+        anniversaries.splice(index, 1);
+        localStorage.setItem('anniversaries', JSON.stringify(anniversaries));
+        closeModal();
+        renderList();
     }
 
     window.onload = () => {

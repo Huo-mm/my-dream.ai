@@ -34,6 +34,7 @@
             flex: 1; display: grid; 
             grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); 
             gap: 10px; padding: 10px 20px; box-sizing: border-box;
+            grid-auto-flow: dense; /* 重要：讓 App 自動填補寵物留下的空隙 */
         }
 
         .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
@@ -46,6 +47,31 @@
             font-size: 28px; margin-bottom: 4px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             background: linear-gradient(135deg, var(--color-a), var(--color-b)) !important; 
+        }
+
+        /* --- 桌面寵物 2x2 樣式 --- */
+        .pet-widget {
+            grid-column: span 2;
+            grid-row: span 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: grab;
+            touch-action: none;
+            z-index: 10;
+        }
+        .pet-widget img {
+            max-width: 90%; max-height: 90%;
+            object-fit: contain; pointer-events: none;
+        }
+        .pet-effect {
+            position: absolute; pointer-events: none; z-index: 9999;
+            font-size: 30px; animation: petFloat 0.8s ease-out forwards;
+        }
+        @keyframes petFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-80px) scale(1.5); opacity: 0; }
         }
 
         .dragging { 
@@ -83,7 +109,6 @@
 
 <script>
     function getAppData() {
-        // ✨ 在 defaultApps 清單中新增了「紀念日」
         const defaultApps = [
             { id: 'chat', name: 'MINE', icon: '💬', url: 'chat.html' },
             { id: 'clock', name: '時間', icon: '⏰', url: 'clock.html' },
@@ -93,34 +118,25 @@
             { id: 'settings', name: '主題', icon: '🎨', url: 'settings.html' },
             { id: 'archive', name: '記憶倉庫', icon: '🏛️', url: 'archive.html' },
             { id: 'mail', name: '信箱', icon: '✉️', url: 'mail.html' },
-            { id: 'anniversary', name: '紀念日', icon: '📅', url: 'anniversary.html' } // <-- 新增在這裡
+            { id: 'anniversary', name: '紀念日', icon: '📅', url: 'anniversary.html' },
+            { id: 'pet_settings', name: '桌寵設定', icon: '🐾', url: 'pet_settings.html' }, // 桌寵設定 App
+            { id: 'desktop_pet_widget', name: '桌寵本體', isPet: true } // 標記為寵物組件
         ];
 
         let currentData = localStorage.getItem('desktop_layout_ordered');
-
         if (currentData) {
             let parsed = JSON.parse(currentData);
-
-            // ✨ 強制同步機制：用 defaultApps 的最新名稱/圖示覆蓋舊資料，但保留排序
             let updatedData = parsed.map(savedApp => {
                 const latest = defaultApps.find(d => d.id === savedApp.id);
-                return latest ? { ...savedApp, name: latest.name, icon: latest.icon, url: latest.url } : savedApp;
+                return latest ? { ...savedApp, name: latest.name, icon: latest.icon, url: latest.url, isPet: latest.isPet } : savedApp;
             });
-
-            // 檢查是否有新增加的 App（例如剛加進去的紀念日）
             defaultApps.forEach(defApp => {
-                if (!updatedData.some(a => a.id === defApp.id)) {
-                    updatedData.push(defApp);
-                }
+                if (!updatedData.some(a => a.id === defApp.id)) updatedData.push(defApp);
             });
-
-            // 移除已經不存在於 defaultApps 的 App
             updatedData = updatedData.filter(uApp => defaultApps.some(d => d.id === uApp.id));
-
             localStorage.setItem('desktop_layout_ordered', JSON.stringify(updatedData));
             return updatedData;
         }
-
         return defaultApps;
     }
 
@@ -128,32 +144,41 @@
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
-    function applyThemeAndWallpaper() {
-        const iconColorA = localStorage.getItem('theme_color_a') || '#4285f4';
-        const iconColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
-        document.documentElement.style.setProperty('--color-a', iconColorA);
-        document.documentElement.style.setProperty('--color-b', iconColorB);
+    // --- 桌面寵物核心邏輯 ---
+    function createPetElement() {
+        const config = JSON.parse(localStorage.getItem('desktop_pet')) || { 
+            idleImg: 'https://via.placeholder.com/100?text=PET', 
+            effectText: '❤️' 
+        };
         
-        const bgColorA = localStorage.getItem('bg_color_a') || iconColorA;
-        const bgColorB = localStorage.getItem('bg_color_b') || iconColorB;
-        const savedWallpaper = localStorage.getItem('active_wallpaper');
-        const bgStyle = localStorage.getItem('bg_style') || 'gradient';
+        const petDiv = document.createElement('div');
+        petDiv.className = 'pet-widget';
+        petDiv.dataset.id = 'desktop_pet_widget';
+        
+        const img = document.createElement('img');
+        img.id = 'mainPetImg';
+        img.src = config.idleImg;
+        petDiv.appendChild(img);
 
-        if (savedWallpaper) {
-            document.body.style.backgroundImage = `url(${savedWallpaper})`;
-        } else {
-            if (bgStyle === 'gradient') {
-                document.body.style.backgroundImage = `linear-gradient(180deg, ${bgColorA}, ${bgColorB})`;
-            } else {
-                document.body.style.backgroundImage = 'none';
-                document.body.style.backgroundColor = bgColorA;
-            }
-        }
+        // 點擊變圖與特效
+        petDiv.addEventListener('mousedown', (e) => {
+            if(config.activeImg) img.src = config.activeImg;
+            spawnPetEffect(e.clientX, e.clientY, config.effectText);
+        });
+
+        setupDragging(petDiv);
+        return petDiv;
     }
 
-    document.addEventListener('touchmove', (e) => {
-        if (window._activeClone) { if (e.cancelable) e.preventDefault(); }
-    }, {passive: false});
+    function spawnPetEffect(x, y, text) {
+        const span = document.createElement('span');
+        span.className = 'pet-effect';
+        span.innerText = text || '❤️';
+        span.style.left = x + 'px';
+        span.style.top = y + 'px';
+        document.body.appendChild(span);
+        setTimeout(() => span.remove(), 800);
+    }
 
     function initDesktop() {
         homeScreen.innerHTML = '';
@@ -161,10 +186,16 @@
             const slot = document.createElement('div');
             slot.className = 'grid-slot';
             slot.dataset.index = index;
-            slot.appendChild(createAppElement(app));
+            
+            if (app.isPet) {
+                slot.appendChild(createPetElement());
+            } else {
+                slot.appendChild(createAppElement(app));
+            }
             homeScreen.appendChild(slot);
         });
-        for (let i = appData.length; i < 24; i++) {
+        // 補足網格
+        for (let i = homeScreen.children.length; i < 24; i++) {
             const slot = document.createElement('div');
             slot.className = 'grid-slot'; slot.dataset.index = i;
             homeScreen.appendChild(slot);
@@ -181,11 +212,14 @@
 
     function setupDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
+        const petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {};
+
         el.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             const rect = el.getBoundingClientRect();
             offsetX = touch.clientX - rect.left;
             offsetY = touch.clientY - rect.top;
+
             dragTimeout = setTimeout(() => {
                 isDragging = true;
                 const clone = el.cloneNode(true);
@@ -194,6 +228,12 @@
                 clone.style.height = rect.height + 'px';
                 clone.style.left = (touch.clientX - offsetX) + 'px';
                 clone.style.top = (touch.clientY - offsetY) + 'px';
+                
+                // 如果是寵物，拖移時變換圖片
+                if(el.classList.contains('pet-widget') && petConfig.dragImg) {
+                    clone.querySelector('img').src = petConfig.dragImg;
+                }
+
                 document.body.appendChild(clone);
                 window._activeClone = clone;
                 el.classList.add('source-hidden');
@@ -224,6 +264,12 @@
 
         el.addEventListener('touchend', () => {
             clearTimeout(dragTimeout);
+            // 回復寵物圖片
+            const petImg = el.querySelector('img');
+            if(el.classList.contains('pet-widget') && petImg && petConfig.idleImg) {
+                petImg.src = petConfig.idleImg;
+            }
+
             if (!isDragging) return;
             isDragging = false;
             if(window._activeClone) window._activeClone.remove();
@@ -233,8 +279,9 @@
         });
     }
 
+    // --- 以下為你原本的系統邏輯，保持不變 ---
     function realTimeReflow(movingId, targetIdx) {
-        const allIcons = document.querySelectorAll('.app-icon:not(.dragging)');
+        const allIcons = document.querySelectorAll('.app-icon, .pet-widget:not(.dragging)');
         const firstPos = {};
         allIcons.forEach(icon => {
             const rect = icon.getBoundingClientRect();
@@ -246,8 +293,8 @@
         appData.splice(targetIdx, 0, movingItem);
         const slots = document.querySelectorAll('.grid-slot');
         appData.forEach((app, index) => {
-            const appEl = document.querySelector(`.app-icon[data-id="${app.id}"]`);
-            if (appEl) slots[index].appendChild(appEl);
+            const appEl = document.querySelector(`[data-id="${app.id}"]`);
+            if (appEl && slots[index]) slots[index].appendChild(appEl);
         });
         requestAnimationFrame(() => {
             allIcons.forEach(icon => {
@@ -266,12 +313,24 @@
         });
     }
 
+    function applyThemeAndWallpaper() {
+        const iconColorA = localStorage.getItem('theme_color_a') || '#4285f4';
+        const iconColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        document.documentElement.style.setProperty('--color-a', iconColorA);
+        document.documentElement.style.setProperty('--color-b', iconColorB);
+        const savedWallpaper = localStorage.getItem('active_wallpaper');
+        if (savedWallpaper) document.body.style.backgroundImage = `url(${savedWallpaper})`;
+    }
+
     function updateTime() {
         const now = new Date();
         document.getElementById('live-time').innerText = 
             now.getHours().toString().padStart(2, '0') + ":" + 
             now.getMinutes().toString().padStart(2, '0');
     }
+
+    // 監聽視窗回到焦點，確保從設定頁面回來時寵物會更新
+    window.onfocus = () => { initDesktop(); };
 
     window.onload = () => { 
         updateTime(); 

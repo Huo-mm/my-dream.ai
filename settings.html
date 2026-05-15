@@ -11,6 +11,7 @@
             margin: 0; background: var(--bg); font-family: -apple-system, sans-serif;
             padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 30px);
             color: #333;
+            transition: background 0.3s ease;
         }
         .header { display: flex; align-items: center; margin-bottom: 25px; }
         .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; color: #333; }
@@ -31,6 +32,7 @@
             border: 3px solid #fff; box-shadow: 0 0 0 1px #ddd;
             transition: transform 0.2s, box-shadow 0.2s;
             background: #eee;
+            overflow: hidden;
         }
         input[type="color"] {
             position: absolute; top: -10px; left: -10px; width: 64px; height: 64px; border: none; cursor: pointer; opacity: 0;
@@ -86,6 +88,22 @@
 </div>
 
 <div class="card">
+    <div class="card-title">🐾 桌寵 App 特效主題</div>
+    <div class="app-row">
+        <div class="app-info">
+            <div id="iconPet" class="app-icon" style="background: #ff4d4d;">🐾</div>
+            <div>
+                <div style="font-size:14px; font-weight:600;">桌寵獨立色</div>
+                <div style="font-size:11px; color:#888;">影響特效與 App 內部按鈕</div>
+            </div>
+        </div>
+        <div class="picker-wrapper" id="pw-petAccent">
+            <input type="color" id="petAccent" oninput="savePetColor(this.value)">
+        </div>
+    </div>
+</div>
+
+<div class="card">
     <div class="card-title">📱 APP 選色</div>
     <div id="appPickerList"></div>
 </div>
@@ -132,7 +150,6 @@
         { id: 'Weather', name: '天氣', icon: '☁️', key: 'app_weather_color_a', def: '#5ac8fa' },
         { id: 'Mail', name: '信箱', icon: '✉️', key: 'app_mail_color_a', def: '#d44638' },
         { id: 'Archive', name: '記憶倉庫', icon: '📦', key: 'app_archive_color_a', def: '#5856d6' },
-        // ✨ 新增紀念日 App 選色設定
         { id: 'Anniversary', name: '紀念日', icon: '📅', key: 'app_anniversary_color_a', def: '#ff2d55' } 
     ];
 
@@ -158,20 +175,36 @@
         document.documentElement.style.setProperty('--primary', primaryColor);
         document.documentElement.style.setProperty('--modal-theme', modalColor);
 
+        // 更新背景預覽
+        const bgA = localStorage.getItem('bg_color_a') || primaryColor;
+        const bgB = localStorage.getItem('bg_color_b') || '#1a2a6c';
+        document.body.style.background = `linear-gradient(180deg, ${bgA}, ${bgB})`;
+
         const allInputs = document.querySelectorAll('input[type="color"]');
         allInputs.forEach(input => {
             const wrapper = document.getElementById('pw-' + input.id);
             if(wrapper) wrapper.style.backgroundColor = input.value;
         });
 
+        // App 圖示背景更新
         apps.forEach(app => {
             const el = document.getElementById('color' + app.id);
-            if(el) {
-                document.getElementById('icon' + app.id).style.background = el.value;
-            }
+            if(el) document.getElementById('icon' + app.id).style.background = el.value;
         });
 
+        // ✨ 桌寵圖示背景更新
+        const petColor = document.getElementById('petAccent').value;
+        document.getElementById('iconPet').style.background = petColor;
+
         if(document.getElementById('syncBtn')) document.getElementById('syncBtn').style.background = primaryColor;
+    }
+
+    // ✨ 專門處理桌寵物件格式的儲存
+    function savePetColor(value) {
+        let petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {};
+        petConfig.accentColor = value;
+        localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+        refreshUI();
     }
 
     function saveLive(key, value) {
@@ -184,7 +217,6 @@
         document.getElementById('modalHeader').innerText = title;
         document.getElementById('modalBody').innerText = msg;
         const footer = document.getElementById('modalFooter');
-
         if (onConfirm) {
             footer.innerHTML = `
                 <button class="modal-btn" style="color:#888" onclick="closeModal()">取消</button>
@@ -200,13 +232,20 @@
     function closeModal() { document.getElementById('customModal').style.display = 'none'; }
 
     function confirmSync() {
-        showModal("一鍵同步", "確定要將所有 APP 與背景色統一為主色調嗎？", () => {
+        showModal("一鍵同步", "確定要將所有 APP、背景色與桌寵色統一為主色調嗎？", () => {
             const mainColor = document.getElementById('sysColorA').value;
+            
+            // 同步一般 App
             apps.forEach(app => {
                 localStorage.setItem(app.key, mainColor);
                 const input = document.getElementById('color' + app.id);
                 if(input) input.value = mainColor;
             });
+
+            // ✨ 同步桌寵色
+            savePetColor(mainColor);
+            document.getElementById('petAccent').value = mainColor;
+
             localStorage.setItem('theme_modal_color', mainColor);
             localStorage.setItem('bg_color_a', mainColor);
             document.getElementById('colorModal').value = mainColor;
@@ -231,21 +270,21 @@
     window.onload = () => {
         initAppList();
 
-        // 1. 先抓取全局主色作為後備參考
         const globalMainColor = localStorage.getItem('theme_color_a') || '#4285f4';
 
-        // 2. 載入系統基礎數值
         document.getElementById('sysColorA').value = globalMainColor;
         document.getElementById('sysColorB').value = localStorage.getItem('theme_color_b') || '#1a2a6c';
         document.getElementById('colorModal').value = localStorage.getItem('theme_modal_color') || globalMainColor;
         document.getElementById('bgColorA').value = localStorage.getItem('bg_color_a') || globalMainColor;
         document.getElementById('bgColorB').value = localStorage.getItem('bg_color_b') || '#1a2a6c';
 
-        // 3. ✨ 核心邏輯：APP 選色載入
+        // ✨ 載入桌寵顏色
+        const petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || { accentColor: '#ff4d4d' };
+        document.getElementById('petAccent').value = petConfig.accentColor || '#ff4d4d';
+
         apps.forEach(app => {
             const input = document.getElementById('color' + app.id);
             if(input) {
-                // 優先權：獨立存檔 > 系統全局主色 > App 初始預設色
                 const saved = localStorage.getItem(app.key);
                 input.value = saved || globalMainColor || app.def;
             }

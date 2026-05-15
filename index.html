@@ -11,9 +11,9 @@
             --color-a: #4285f4; 
             --color-b: #1a2a6c; 
         }
-        
-        html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: auto; background: #1a2a6c; }
-        
+
+        html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #1a2a6c; }
+
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
             background-color: var(--color-a);
@@ -32,47 +32,59 @@
 
         #home-screen {
             flex: 1; display: grid; 
-            grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); 
-            gap: 10px; padding: 10px 20px; box-sizing: border-box;
-            grid-auto-flow: dense; 
+            grid-template-columns: repeat(4, 1fr); 
+            grid-template-rows: repeat(6, 1fr); 
+            gap: 15px; padding: 20px; box-sizing: border-box;
+            grid-auto-flow: dense; /* 重要：讓小圖標能自動填補大組件留下的空隙 */
         }
 
-        .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
-        .source-hidden { opacity: 0 !important; visibility: hidden; }
+        .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; min-height: 80px; }
         
+        /* App 圖示樣式 */
+        .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; transition: transform 0.2s; }
         .icon-box { 
             width: 55px; height: 55px; border-radius: 14px; 
             display: flex; justify-content: center; align-items: center; 
             font-size: 28px; margin-bottom: 4px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            background: linear-gradient(135deg, var(--color-a), var(--color-b)) !important; 
+            background: linear-gradient(135deg, var(--color-a), var(--color-b)); 
         }
 
+        /* 桌寵專屬樣式 (2x2 網格) */
         .pet-widget {
             grid-column: span 2; grid-row: span 2;
+            width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
             position: relative; cursor: grab; touch-action: none; z-index: 10;
         }
-        .pet-widget img { max-width: 90%; max-height: 90%; object-fit: contain; pointer-events: none; }
-        
+        .pet-widget img { 
+            width: 120px; height: 120px; /* 放大桌寵 */
+            object-fit: contain; pointer-events: none; 
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
+        }
+
+        /* 拖移與動畫特效 */
+        .source-hidden { opacity: 0 !important; }
+        .dragging { 
+            opacity: 0.8 !important; transform: scale(1.1) !important;
+            position: fixed !important; z-index: 9999 !important; 
+            pointer-events: none !important; transition: none !important;
+        }
+
         .pet-effect {
             position: absolute; pointer-events: none; z-index: 9999;
             font-size: 30px; animation: petFloat 0.8s ease-out forwards;
         }
         @keyframes petFloat {
             0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-80px) scale(1.5); opacity: 0; }
+            100% { transform: translateY(-100px) scale(2); opacity: 0; }
         }
 
-        .dragging { 
-            opacity: 0.9 !important; transform: translateZ(0) scale(1.08) !important;
-            transform-origin: top left !important; position: fixed !important;
-            left: 0; top: 0; z-index: 9999 !important; pointer-events: none !important;
-            transition: none !important; margin: 0 !important; will-change: transform, left, top;
+        #dock { 
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+            margin: 0 20px calc(var(--safe-bottom) + 15px) 20px; padding: 12px; 
+            border-radius: 30px; display: flex; justify-content: space-around; flex-shrink: 0; 
         }
-
-        #dock { background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); margin: 0 20px calc(var(--safe-bottom) + 15px) 20px; padding: 12px; border-radius: 30px; display: flex; justify-content: space-around; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -93,24 +105,30 @@
 </div>
 
 <script>
-    // --- 主題色與桌布應用 ---
+    // --- 核心變數 ---
+    let appData = [];
+    const homeScreen = document.getElementById('home-screen');
+    let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
+
+    // --- 主題與外觀應用 ---
     function applyTheme() {
         const colorA = localStorage.getItem('theme_color_a') || '#4285f4';
         const colorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
         const wallpaper = localStorage.getItem('active_wallpaper');
-        
+
         document.documentElement.style.setProperty('--color-a', colorA);
         document.documentElement.style.setProperty('--color-b', colorB);
-        
+
         if (wallpaper) {
             document.body.style.backgroundImage = `url(${wallpaper})`;
+            document.body.style.backgroundSize = 'cover';
         } else {
             document.body.style.backgroundImage = `linear-gradient(180deg, ${colorA}, ${colorB})`;
         }
     }
 
-    // --- 數據與初始化 ---
-    function getAppData() {
+    // --- 取得 App 與 桌寵數據 ---
+    function loadAppData() {
         const petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || { enabled: false };
         const defaultApps = [
             { id: 'chat', name: 'MINE', icon: '💬', url: 'chat.html' },
@@ -119,83 +137,47 @@
             { id: 'gallery', name: '相簿', icon: '🖼️', url: 'gallery.html' },
             { id: 'notes', name: '備忘錄', icon: '📝', url: 'notes.html' },
             { id: 'settings', name: '主題', icon: '🎨', url: 'settings.html' },
-            { id: 'archive', name: '記憶倉庫', icon: '🏛️', url: 'archive.html' },
             { id: 'mail', name: '信箱', icon: '✉️', url: 'mail.html' },
-            { id: 'anniversary', name: '紀念日', icon: '📅', url: 'anniversary.html' },
             { id: 'pet_settings', name: '桌寵設定', icon: '🐾', url: 'pet_settings.html' }
         ];
 
+        // 插入桌寵組件
         if (petConfig.enabled) {
             defaultApps.push({ id: 'desktop_pet_widget', name: '桌寵', isPet: true });
         }
 
-        let currentData = localStorage.getItem('desktop_layout_ordered');
-        if (currentData) {
-            let parsed = JSON.parse(currentData);
-            let updatedData = parsed.filter(savedApp => defaultApps.some(d => d.id === savedApp.id));
-            updatedData = updatedData.map(savedApp => {
-                const latest = defaultApps.find(d => d.id === savedApp.id);
-                return { ...savedApp, ...latest };
+        let savedLayout = localStorage.getItem('desktop_layout_ordered');
+        if (savedLayout) {
+            let parsed = JSON.parse(savedLayout);
+            // 過濾並同步最新的 App 資訊
+            let filtered = parsed.filter(p => defaultApps.some(d => d.id === p.id));
+            defaultApps.forEach(d => {
+                if (!filtered.some(f => f.id === d.id)) filtered.push(d);
             });
-            defaultApps.forEach(defApp => {
-                if (!updatedData.some(a => a.id === defApp.id)) updatedData.push(defApp);
-            });
-            return updatedData;
+            appData = filtered;
+        } else {
+            appData = defaultApps;
         }
-        return defaultApps;
     }
 
-    let appData = getAppData();
-    const homeScreen = document.getElementById('home-screen');
-    let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
-
-    // --- 桌寵元件與遞補邏輯 ---
-    function createPetElement() {
-        const config = JSON.parse(localStorage.getItem('desktop_pet')) || { enabled: false };
-        const petDiv = document.createElement('div');
-        petDiv.className = 'pet-widget';
-        petDiv.dataset.id = 'desktop_pet_widget';
-        
-        const img = document.createElement('img');
-        const defaultImg = 'https://via.placeholder.com/100?text=PET';
-        img.src = config.idleImg || defaultImg;
-        petDiv.appendChild(img);
-
-        petDiv.addEventListener('mousedown', (e) => {
-            img.src = config.activeImg || config.idleImg || defaultImg;
-            spawnPetEffect(e.clientX, e.clientY, config.effectText);
-        });
-
-        setupDragging(petDiv, config);
-        return petDiv;
-    }
-
-    function spawnPetEffect(x, y, text) {
-        const span = document.createElement('span');
-        span.className = 'pet-effect';
-        span.innerText = text || '❤️';
-        span.style.left = x + 'px';
-        span.style.top = y + 'px';
-        document.body.appendChild(span);
-        setTimeout(() => span.remove(), 800);
-    }
-
+    // --- 初始化桌面 ---
     function initDesktop() {
         homeScreen.innerHTML = '';
         appData.forEach((app, index) => {
             const slot = document.createElement('div');
             slot.className = 'grid-slot';
             slot.dataset.index = index;
-            if (app.isPet) {
-                slot.appendChild(createPetElement());
-            } else {
-                slot.appendChild(createAppElement(app));
-            }
+            
+            const el = app.isPet ? createPetElement() : createAppElement(app);
+            slot.appendChild(el);
             homeScreen.appendChild(slot);
         });
+
+        // 填充空白格子
         for (let i = homeScreen.children.length; i < 24; i++) {
             const slot = document.createElement('div');
-            slot.className = 'grid-slot'; slot.dataset.index = i;
+            slot.className = 'grid-slot';
+            slot.dataset.index = i;
             homeScreen.appendChild(slot);
         }
     }
@@ -203,15 +185,49 @@
     function createAppElement(app) {
         const a = document.createElement('a');
         a.href = app.url; a.className = 'app-icon'; a.dataset.id = app.id;
-        a.innerHTML = `<div class="icon-box">${app.icon}</div><span style="font-size:10px;">${app.name}</span>`;
-        setupDragging(a, null);
+        a.innerHTML = `<div class="icon-box">${app.icon}</div><span style="font-size:10px; margin-top:2px;">${app.name}</span>`;
+        setupDragging(a);
         return a;
     }
 
-    function setupDragging(el, petConfig) {
-        let isDragging = false, lastTargetIdx = -1;
+    function createPetElement() {
+        const config = JSON.parse(localStorage.getItem('desktop_pet')) || {};
+        const div = document.createElement('div');
+        div.className = 'pet-widget';
+        div.dataset.id = 'desktop_pet_widget';
+        
+        const img = document.createElement('img');
+        img.src = config.idleImg || 'https://via.placeholder.com/120?text=PET';
+        div.appendChild(img);
+
+        // 點擊特效
+        div.addEventListener('click', (e) => {
+            if (window._isDraggingAction) return;
+            img.src = config.activeImg || config.idleImg;
+            spawnPetEffect(e.clientX, e.clientY, config.effectText);
+            setTimeout(() => { img.src = config.idleImg; }, 1000);
+        });
+
+        setupDragging(div, config);
+        return div;
+    }
+
+    function spawnPetEffect(x, y, text) {
+        const span = document.createElement('span');
+        span.className = 'pet-effect';
+        span.innerText = text || '❤️';
+        span.style.left = x + 'px'; span.style.top = y + 'px';
+        document.body.appendChild(span);
+        setTimeout(() => span.remove(), 800);
+    }
+
+    // --- 拖移邏輯 ---
+    function setupDragging(el, petConfig = null) {
+        let isDragging = false;
+        let lastTargetIdx = -1;
 
         el.addEventListener('touchstart', (e) => {
+            window._isDraggingAction = false;
             const touch = e.touches[0];
             const rect = el.getBoundingClientRect();
             offsetX = touch.clientX - rect.left;
@@ -219,32 +235,36 @@
 
             dragTimeout = setTimeout(() => {
                 isDragging = true;
+                window._isDraggingAction = true;
                 const clone = el.cloneNode(true);
                 clone.classList.add('dragging');
                 
-                if (el.classList.contains('pet-widget') && petConfig) {
-                    const cloneImg = clone.querySelector('img');
-                    cloneImg.src = petConfig.dragImg || petConfig.activeImg || petConfig.idleImg || 'https://via.placeholder.com/100?text=PET';
+                if (petConfig && clone.querySelector('img')) {
+                    clone.querySelector('img').src = petConfig.dragImg || petConfig.idleImg;
                 }
 
                 clone.style.width = rect.width + 'px';
                 clone.style.height = rect.height + 'px';
                 clone.style.left = (touch.clientX - offsetX) + 'px';
                 clone.style.top = (touch.clientY - offsetY) + 'px';
+                
                 document.body.appendChild(clone);
                 window._activeClone = clone;
                 el.classList.add('source-hidden');
                 lastTargetIdx = appData.findIndex(a => a.id === el.dataset.id);
-            }, 500);
+            }, 600);
         }, {passive: true});
 
         el.addEventListener('touchmove', (e) => {
             if (!isDragging) return clearTimeout(dragTimeout);
+            e.preventDefault();
             const touch = e.touches[0];
+            
             if(window._activeClone) {
                 window._activeClone.style.left = (touch.clientX - offsetX) + 'px';
                 window._activeClone.style.top = (touch.clientY - offsetY) + 'px';
             }
+
             if (isReordering) return;
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
             const slot = target?.closest('.grid-slot');
@@ -254,60 +274,64 @@
                     lastTargetIdx = targetIdx;
                     isReordering = true;
                     realTimeReflow(el.dataset.id, targetIdx);
-                    setTimeout(() => { isReordering = false; }, 120); 
+                    setTimeout(() => { isReordering = false; }, 150); 
                 }
             }
         }, {passive: false});
 
         el.addEventListener('touchend', () => {
             clearTimeout(dragTimeout);
-            const petImg = el.querySelector('img');
-            if(el.classList.contains('pet-widget') && petImg && petConfig) {
-                petImg.src = petConfig.idleImg || 'https://via.placeholder.com/100?text=PET';
-            }
             if (!isDragging) return;
             isDragging = false;
             if(window._activeClone) window._activeClone.remove();
-            window._activeClone = null;
+            el.classList.remove('source-hidden');
             localStorage.setItem('desktop_layout_ordered', JSON.stringify(appData));
             initDesktop(); 
         });
     }
 
     function realTimeReflow(movingId, targetIdx) {
-        const allIcons = document.querySelectorAll('.app-icon, .pet-widget:not(.dragging)');
+        const allIcons = document.querySelectorAll('.app-icon, .pet-widget');
         const firstPos = {};
+        
         allIcons.forEach(icon => {
+            if(icon.classList.contains('dragging')) return;
             const rect = icon.getBoundingClientRect();
             firstPos[icon.dataset.id] = { x: rect.left, y: rect.top };
         });
+
         const movingItem = appData.find(a => a.id === movingId);
         const oldIdx = appData.indexOf(movingItem);
         appData.splice(oldIdx, 1);
         appData.splice(targetIdx, 0, movingItem);
+
         const slots = document.querySelectorAll('.grid-slot');
         appData.forEach((app, index) => {
-            const appEl = document.querySelector(`[data-id="${app.id}"]`);
+            const appEl = document.querySelector(`[data-id="${app.id}"]:not(.dragging)`);
             if (appEl && slots[index]) slots[index].appendChild(appEl);
         });
+
+        // FLIP 動畫
         requestAnimationFrame(() => {
             allIcons.forEach(icon => {
+                if(icon.classList.contains('dragging')) return;
                 const id = icon.dataset.id;
                 const rect = icon.getBoundingClientRect();
-                const dx = (firstPos[id]?.x || 0) - rect.left;
-                const dy = (firstPos[id]?.y || 0) - rect.top;
+                const dx = (firstPos[id]?.x || rect.left) - rect.left;
+                const dy = (firstPos[id]?.y || rect.top) - rect.top;
+                
                 if (dx !== 0 || dy !== 0) {
                     icon.style.transition = 'none';
                     icon.style.transform = `translate(${dx}px, ${dy}px)`;
                     icon.offsetWidth; 
-                    icon.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
+                    icon.style.transition = 'transform 0.4s cubic-bezier(0.2, 1, 0.2, 1)';
                     icon.style.transform = 'translate(0, 0)';
                 }
             });
         });
     }
 
-    // --- 系統功能 ---
+    // --- 時間與系統監聽 ---
     function updateTime() {
         const now = new Date();
         document.getElementById('live-time').innerText = 
@@ -315,21 +339,19 @@
             now.getMinutes().toString().padStart(2, '0');
     }
 
-    // 監聽所有設定相關的變動，即時更新
     window.addEventListener('storage', (e) => {
-        if (e.key === 'pet_sync_trigger' || e.key === 'desktop_pet' || e.key === 'theme_color_a' || e.key === 'active_wallpaper') {
-            applyTheme();
-            appData = getAppData();
-            initDesktop();
+        if (['theme_color_a', 'active_wallpaper', 'desktop_pet'].includes(e.key)) {
+            applyTheme(); loadAppData(); initDesktop();
         }
     });
 
-    window.onfocus = () => { applyTheme(); appData = getAppData(); initDesktop(); };
+    window.onfocus = () => { applyTheme(); loadAppData(); initDesktop(); };
     window.onload = () => { 
-        applyTheme(); // 初始化應用主題
-        updateTime(); 
-        initDesktop(); 
-        setInterval(updateTime, 1000); 
+        applyTheme();
+        loadAppData();
+        initDesktop();
+        updateTime();
+        setInterval(updateTime, 1000);
     };
 </script>
 </body>

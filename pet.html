@@ -332,7 +332,7 @@
         setupBoxPreview('imgDragPreview', petConfig.dragImg);
     }
 
-    // 💡 新增：在大預覽圖綁定按住不放的測試事件，完美模擬「拖曳時持續顯示拖曳圖，放開恢復」
+    // 💡 大預覽圖綁定按住不放的測試事件，完美模擬「拖曳時持續顯示拖曳圖，放開恢復」
     function bindDragPreviewEvents() {
         const previewImg = document.getElementById('petPreviewImg');
         const defaultImg = 'https://via.placeholder.com/100?text=🐾';
@@ -378,6 +378,12 @@
                 petConfig[configKey] = e.target.result; 
                 localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
                 localStorage.setItem('pet_sync_trigger', Date.now()); 
+                
+                // 💡 修正關鍵：上傳新圖片時，如果上傳的是靜止圖，讓大預覽圖也立即同步更新畫面
+                if (configKey === 'idleImg' && !isInteracting) {
+                    document.getElementById('petPreviewImg').src = e.target.result;
+                }
+                
                 refreshPreviews();
             };
             reader.readAsDataURL(input.files[0]);
@@ -422,7 +428,7 @@
         // 切換為互動點擊圖
         imgEl.src = petConfig.activeImg || petConfig.idleImg || defaultActive;
         
-        // 💡 修正：將互動圖維持顯示的時間從 1000ms 延長至 2000ms (2秒)
+        // 互動圖維持顯示的時間維持 2000ms (2秒)
         setTimeout(() => { 
             isInteracting = false;
             imgEl.src = petConfig.idleImg || 'https://via.placeholder.com/100?text=🐾'; 

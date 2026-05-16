@@ -3,288 +3,445 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-    <title>桌寵設定中心</title>
+    <title>C² 桌寵設定中心</title>
     <style>
         :root { 
-            --safe-top: env(safe-area-inset-top); 
-            --safe-bottom: env(safe-area-inset-bottom);
-            --color-a: #4285f4; 
-            --color-b: #1a2a6c; 
+            --primary: #f0f2f5; 
+            --primary-dark: #1a2a6c;
+            --bg: #f0f2f5; 
+            --text-on-primary: #ffffff;
+            --modal-theme: #4285f4;
         }
 
-        html, body { margin: 0; padding: 0; height: 100%; width: 100%; background: #1a2a6c; }
-
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
-            color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
-            background-color: var(--color-a);
-            background-image: linear-gradient(180deg, var(--color-a), var(--color-b));
-            background-size: cover; background-position: center;
-            -webkit-touch-callout: none !important; 
-            -webkit-user-select: none !important; 
-            user-select: none !important;
-            position: relative; 
-            overscroll-behavior-y: contain; 
-            overflow-x: hidden;
-            overflow-y: auto;
+            margin: 0; font-family: -apple-system, sans-serif; 
+            background: var(--bg); display: flex; flex-direction: column; height: 100dvh; 
+            overflow: hidden;
         }
 
-        #header {
-            padding: calc(var(--safe-top) + 15px) 20px 15px 20px;
-            display: flex; align-items: center; justify-content: space-between;
-            background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            z-index: 1000; position: sticky; top: 0;
+        /* 標題列：優先同步屬於桌寵的獨立主題色 */
+        .app-bar { 
+            padding: calc(env(safe-area-inset-top) + 15px) 15px 15px; 
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
+            color: var(--text-on-primary);
+            display: flex; align-items: center; justify-content: space-between; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 10; transition: background 0.3s, color 0.3s;
+        }
+        .app-bar a { text-decoration: none; color: inherit; font-weight: bold; font-size: 17px; }
+
+        .content {
+            padding: 15px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 15px;
         }
 
-        .back-btn { text-decoration: none; color: white; font-size: 18px; font-weight: bold; }
-        .title { font-size: 18px; font-weight: bold; }
-
-        .container { padding: 20px; box-sizing: border-box; flex: 1; }
-
+        /* 設定區塊卡片 */
         .setting-card {
-            background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            border-radius: 20px; padding: 20px; margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            background: white; padding: 20px; border-radius: 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; gap: 12px;
         }
+        .row-space { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+        .setting-info h4 { margin: 0 0 5px 0; color: #333; font-size: 16px; }
+        .setting-info p { margin: 0; color: #888; font-size: 13px; }
 
-        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .setting-row:last-child { margin-bottom: 0; }
-        .label-text { font-size: 16px; font-weight: 500; }
-
-        /* Switch 開關 */
-        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        /* iOS 風格美化開關 */
+        .switch { position: relative; display: inline-block; width: 51px; height: 31px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.3); transition: .3s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
-        input:checked + .slider { background-color: #4cd964; }
-        input:checked + .slider:before { transform: translateX(22px); }
-
-        .input-label { display: block; font-size: 14px; margin-bottom: 6px; color: rgba(255, 255, 255, 0.85); font-weight: 500; }
-
-        /* 💡 修正：改造為適合上傳檔案的 input 樣式 */
-        .input-box {
-            width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3);
-            background: rgba(0, 0, 0, 0.2); color: white; font-size: 14px; box-sizing: border-box; margin-bottom: 15px;
+        .slider {
+            position: absolute; cursor: pointer; inset: 0; background-color: #ccc;
+            transition: .3s; border-radius: 34px;
         }
-        .input-box:last-child { margin-bottom: 0; }
+        .slider:before {
+            position: absolute; content: ""; height: 27px; width: 27px; left: 2px; bottom: 2px;
+            background-color: white; transition: .3s; border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+        input:checked + .slider:before { transform: translateX(20px); }
 
-        /* 滑桿樣式 */
-        .range-slider { width: 65%; -webkit-appearance: none; background: rgba(255,255,255,0.3); height: 6px; border-radius: 5px; outline: none; }
-        .range-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: white; cursor: pointer; }
+        /* 大小調節拉桿樣式 */
+        .range-container { width: 100%; display: flex; align-items: center; gap: 12px; margin-top: 5px; }
+        .range-slider {
+            flex: 1; -webkit-appearance: none; appearance: none; height: 6px; 
+            background: #e0e0e0; border-radius: 5px; outline: none;
+        }
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 22px; height: 22px; 
+            border-radius: 50%; background: white; cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 1px solid #ddd;
+        }
+        .range-value { font-size: 14px; color: #555; font-weight: 500; min-width: 45px; text-align: right; }
 
-        /* 儲存按鈕 */
-        .save-btn {
-            width: 100%; padding: 15px; border-radius: 15px; border: none;
-            background: #4cd964; color: white; font-size: 16px; font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.1s;
+        /* 自訂文字輸入框樣式 */
+        .text-input-container { width: 100%; margin-top: 5px; }
+        .effect-text-input {
+            width: 100%; padding: 12px 16px; border: 1.5px solid #e0e0e0; border-radius: 12px;
+            font-size: 15px; color: #333; outline: none; background: #f8f9fa;
+            transition: border-color 0.2s, background-color 0.2s;
         }
-        .save-btn:active { transform: scale(0.98); }
+        .effect-text-input:focus {
+            border-color: var(--modal-theme); background: white;
+        }
 
-        /* 預覽區域 */
-        .preview-area { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
-        .preview-pet-box {
-            width: 120px; height: 120px; display: flex; justify-content: center; align-items: center;
-            border: 2px dashed rgba(255,255,255,0.3); border-radius: 20px; margin-top: 10px; position: relative;
+        /* 相簿風格相片上傳區塊 */
+        .upload-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 5px; }
+        .upload-box {
+            background: #f8f9fa; border: 2px dashed #ccced0; border-radius: 12px;
+            aspect-ratio: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 6px; cursor: pointer; position: relative; overflow: hidden;
         }
-        .preview-pet-box img { 
-            max-width: 100%; max-height: 100%; object-fit: contain; 
-            -webkit-touch-callout: none !important;
-            -webkit-user-select: none !important;
-            user-select: none !important;
-            -webkit-user-drag: none !important;
+        .upload-box:active { background: #f0f1f2; }
+        .upload-box img { width: 100%; height: 100%; object-fit: contain; position: absolute; top:0; left:0; }
+        .upload-box span { font-size: 11px; color: #666; font-weight: 500; z-index: 1; text-align: center; padding: 0 4px; }
+        .upload-box .icon { font-size: 20px; z-index: 1; }
+        .upload-box input[type="file"] { display: none; }
+
+        /* 預覽卡片 */
+        .pet-preview-box {
+            background: white; border-radius: 16px; padding: 25px; text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
         }
-        .preview-effect { position: absolute; font-size: 24px; animation: pFloat 0.8s ease-out forwards; pointer-events: none; }
-        @keyframes pFloat {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-40px); opacity: 0; }
+        .preview-window {
+            height: 200px; display: flex; align-items: center; justify-content: center; width: 100%;
         }
+        .preview-window img { height: auto; object-fit: contain; transition: width 0.1s ease; cursor: grab; user-select: none; -webkit-user-drag: none; }
+        .preview-window img:active { cursor: grabbing; }
+
+        /* 按鈕：同步漸層 */
+        .btn-action { 
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
+            color: var(--text-on-primary); 
+            padding: 16px; text-align: center; border-radius: 15px; cursor: pointer; 
+            font-weight: bold; border: none; width: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s;
+            font-size: 15px;
+        }
+        .btn-action:active { transform: scale(0.98); }
+
+        /* 系統通知彈窗 */
+        #customModal {
+            display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;
+            backdrop-filter: blur(8px);
+        }
+        .modal-content {
+            background:white; width:85%; max-width:320px; border-radius:28px; 
+            overflow:hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .modal-header { 
+            padding:18px; text-align:center; color:var(--text-on-primary); 
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
+            font-weight:bold; font-size: 16px; transition: 0.3s;
+        }
+        .modal-body { padding:25px 20px; text-align:center; color:#444; font-size:15px; line-height:1.5; }
+        .modal-footer { display:flex; border-top:1px solid #eee; }
+        .modal-btn { flex:1; padding:16px; border:none; background:white; color:var(--modal-theme); font-weight:bold; font-size:16px; cursor:pointer; }
+        .modal-btn:active { background: #f9f9f9; }
+
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
-<div id="header">
-    <a href="index.html" class="back-btn">ㄑ 返回</a>
-    <div class="title">🐾 桌寵設定中心</div>
-    <div style="width: 40px;"></div>
+<div class="app-bar" id="appBar">
+    <a href="index.html">❮ 返回</a>
+    <h3 style="margin:0">桌面精靈中心</h3>
+    <span style="width:40px"></span>
 </div>
 
-<div class="container">
-    <!-- 基本開關 -->
+<div class="content">
+    <!-- 開關卡片 -->
     <div class="setting-card">
-        <div class="setting-row">
-            <span class="label-text">啟用桌面精靈</span>
+        <div class="row-space">
+            <div class="setting-info">
+                <h4>顯示桌面精靈</h4>
+                <p>開啟後，精靈會以自訂大小浮現於桌面</p>
+            </div>
             <label class="switch">
-                <input type="checkbox" id="pet-toggle">
+                <input type="checkbox" id="petToggle" onchange="togglePet(this)">
                 <span class="slider"></span>
             </label>
         </div>
-        <div class="setting-row" style="margin-top: 20px;">
-            <span class="label-text">桌寵大小</span>
-            <input type="range" id="pet-size" class="range-slider" min="60" max="200" value="110">
-            <span id="size-val" style="font-size: 14px; width: 40px; text-align: right;">110px</span>
-        </div>
     </div>
 
-    <!-- 自訂外觀動作 (改為直接上傳圖檔模式) -->
+    <!-- 尺寸拉桿卡片 -->
     <div class="setting-card">
-        <div style="font-size: 16px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">🎨 自訂外觀與動作</div>
-        
-        <!-- 💡 修正：全改為 type="file" 以便直接選取相簿圖檔 -->
-        <label class="input-label">靜態 / 閒置圖檔：</label>
-        <input type="file" id="file-idle" class="input-box" accept="image/*">
-        
-        <label class="input-label">點擊互動圖檔：</label>
-        <input type="file" id="file-active" class="input-box" accept="image/*">
-        
-        <label class="input-label">按住拖曳圖檔：</label>
-        <input type="file" id="file-drag" class="input-box" accept="image/*">
-        
-        <label class="input-label">點擊彈出文字 / 特效：</label>
-        <!-- 特效依然維持文字輸入 -->
-        <input type="text" id="effect-text" class="input-box" placeholder="例如：❤️ 或 喵~ (預設為 ❤️)" style="-webkit-user-select: text !important; user-select: text !important;">
+        <div class="setting-info" style="width:100%">
+            <h4>精靈顯示大小</h4>
+            <p>自由調整精靈在桌面的尺寸大小</p>
+            <div class="range-container">
+                <input type="range" id="petSizeSlider" class="range-slider" min="60" max="200" value="110" oninput="updatePetSize(this.value)">
+                <span class="range-value" id="sizeValue">110 px</span>
+            </div>
+        </div>
     </div>
 
-    <!-- 儲存 -->
-    <button class="save-btn" onclick="savePetConfig()">儲存並應用設定</button>
-
-    <!-- 即時預覽 -->
-    <div class="setting-card preview-area">
-        <div style="font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 5px;">✨ 點擊下方區塊可測試點擊動效</div>
-        <div class="preview-pet-box" id="preview-box">
-            <img id="preview-img" src="" alt="寵物預覽">
+    <!-- 互動特效文字設定卡片 -->
+    <div class="setting-card">
+        <div class="setting-info" style="width:100%">
+            <h4>自訂點擊互動文字</h4>
+            <p>輸入精靈被點擊時，頭頂噴發出的 Emoji 或對話</p>
+            <div class="text-input-container">
+                <input type="text" id="petEffectTextInput" class="effect-text-input" placeholder="例如：🐱喵~ 或 ❤️" onchange="updateEffectText(this.value)">
+            </div>
         </div>
+    </div>
+
+    <!-- 相簿風格三態外觀上傳區塊 -->
+    <div class="setting-card">
+        <div class="setting-info" style="width: 100%; margin-bottom: 5px;">
+            <h4>自訂精靈動作外觀</h4>
+            <p>點擊格子可自相簿挑選 PNG/JPG 替換</p>
+        </div>
+        <div class="upload-grid">
+            <!-- 靜止圖 -->
+            <div class="upload-box" onclick="triggerUpload('fileIdle')">
+                <div class="icon">🐾</div>
+                <span>靜止外觀</span>
+                <img id="imgIdlePreview" style="display:none;">
+                <input type="file" id="fileIdle" accept="image/*" onchange="handleImageUpload(this, 'idleImg')">
+            </div>
+            <!-- 點擊圖 -->
+            <div class="upload-box" onclick="triggerUpload('fileActive')">
+                <div class="icon">❤️</div>
+                <span>點擊互動</span>
+                <img id="imgActivePreview" style="display:none;">
+                <input type="file" id="fileActive" accept="image/*" onchange="handleImageUpload(this, 'activeImg')">
+            </div>
+            <!-- 移動圖 -->
+            <div class="upload-box" onclick="triggerUpload('fileDrag')">
+                <div class="icon">✈️</div>
+                <span>拖曳移動</span>
+                <img id="imgDragPreview" style="display:none;">
+                <input type="file" id="fileDrag" accept="image/*" onchange="handleImageUpload(this, 'dragImg')">
+            </div>
+        </div>
+    </div>
+
+    <!-- 預覽視窗 -->
+    <div class="pet-preview-box">
+        <div style="font-size: 13px; color: #999;">即時預覽效果（按住圖片可測試拖曳外觀）</div>
+        <div class="preview-window">
+            <img id="petPreviewImg" src="https://via.placeholder.com/100?text=🐾" alt="Pet">
+        </div>
+        <button class="btn-action" onclick="interactWithPet()">互動測試</button>
+    </div>
+</div>
+
+<div id="customModal">
+    <div class="modal-content">
+        <div id="modalHeader" class="modal-header">通知</div>
+        <div id="modalBody" class="modal-body">內容文字</div>
+        <div class="modal-footer" id="modalFooter"></div>
     </div>
 </div>
 
 <script>
-    // 套用主題顏色
-    function applyTheme() {
-        const colorA = localStorage.getItem('theme_color_a') || '#4285f4';
-        const colorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
-        const wallpaper = localStorage.getItem('active_wallpaper');
-        document.documentElement.style.setProperty('--color-a', colorA);
-        document.documentElement.style.setProperty('--color-b', colorB);
-        if (wallpaper) {
-            document.body.style.backgroundImage = `url(${wallpaper})`;
-        } else {
-            document.body.style.backgroundImage = `linear-gradient(180deg, ${colorA}, ${colorB})`;
-        }
-    }
-
-    // 暫存目前的圖片 Base64 資料，用於比對或沒重新選取時保留舊檔
-    let petDataUrls = { idle: '', active: '', drag: '' };
-    const defaultImg = 'https://via.placeholder.com/100?text=PET';
-
-    // 載入當前桌寵配置
-    function loadPetConfig() {
-        applyTheme();
-        const currentConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {
-            enabled: false,
-            size: 110,
-            idleImg: '',
-            activeImg: '',
-            dragImg: '',
-            effectText: '❤️'
-        };
-
-        // 填入控制項
-        document.getElementById('pet-toggle').checked = currentConfig.enabled;
-        document.getElementById('pet-size').value = currentConfig.size || 110;
-        document.getElementById('size-val').innerText = (currentConfig.size || 110) + 'px';
-        document.getElementById('effect-text').value = currentConfig.effectText || '❤️';
-
-        // 將既有的圖片紀錄存入暫存變數
-        petDataUrls.idle = currentConfig.idleImg || '';
-        petDataUrls.active = currentConfig.activeImg || '';
-        petDataUrls.drag = currentConfig.dragImg || '';
-
-        updatePreview();
-    }
-
-    // 將 File 欄位轉換為 Base64 格式
-    function getBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
-
-    // 更新預覽畫面
-    function updatePreview() {
-        const pImg = document.getElementById('preview-img');
-        pImg.src = petDataUrls.idle || defaultImg;
-    }
-
-    // 💡 修正：當使用者在手機相簿選完照片後，即時觸更新預覽
-    document.getElementById('file-idle').addEventListener('change', async (e) => {
-        if(e.target.files.length > 0) {
-            petDataUrls.idle = await getBase64(e.target.files[0]);
-            updatePreview();
-        }
-    });
-    document.getElementById('file-active').addEventListener('change', async (e) => {
-        if(e.target.files.length > 0) {
-            petDataUrls.active = await getBase64(e.target.files[0]);
-        }
-    });
-    document.getElementById('file-drag').addEventListener('change', async (e) => {
-        if(e.target.files.length > 0) {
-            petDataUrls.drag = await getBase64(e.target.files[0]);
-        }
-    });
-
-    document.getElementById('pet-size').addEventListener('input', (e) => {
-        document.getElementById('size-val').innerText = e.target.value + 'px';
-    });
-
-    // 預覽區點擊動效測試
-    const pBox = document.getElementById('preview-box');
-    const pImg = document.getElementById('preview-img');
-
-    pBox.addEventListener('contextmenu', (e) => e.preventDefault());
-    pImg.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    function triggerPreviewActive() {
-        const effectTxt = document.getElementById('effect-text').value || '❤️';
-
-        if (petDataUrls.active) pImg.src = petDataUrls.active;
-        
-        const span = document.createElement('span');
-        span.className = 'preview-effect';
-        span.innerText = effectTxt;
-        span.style.left = '45%';
-        span.style.top = '40%';
-        pBox.appendChild(span);
-        
-        setTimeout(() => span.remove(), 800);
-        setTimeout(() => { pImg.src = petDataUrls.idle || defaultImg; }, 2000);
-    }
-
-    pBox.onclick = triggerPreviewActive;
-    pBox.ontouchstart = (e) => {
-        e.preventDefault(); 
-        triggerPreviewActive();
+    // 全域基礎結構
+    let petConfig = {
+        enabled: false,
+        size: 110,
+        idleImg: 'https://via.placeholder.com/100?text=🐾',
+        activeImg: 'https://via.placeholder.com/100?text=❤️',
+        dragImg: '', 
+        effectText: '🐱喵~',
+        accentColor: '#ff4d4d'
     };
 
-    // 儲存設定
-    function savePetConfig() {
-        const config = {
-            enabled: document.getElementById('pet-toggle').checked,
-            size: parseInt(document.getElementById('pet-size').value),
-            idleImg: petDataUrls.idle,
-            activeImg: petDataUrls.active,
-            dragImg: petDataUrls.drag,
-            effectText: document.getElementById('effect-text').value || '❤️'
-        };
+    let isInteracting = false; // 💡 防止互動測試與拖曳測試的狀態衝突
 
-        localStorage.setItem('desktop_pet', JSON.stringify(config));
-        localStorage.setItem('pet_sync_trigger', Date.now());
+    function applyTheme() {
+        const localData = localStorage.getItem('desktop_pet');
+        let currentPet = localData ? JSON.parse(localData) : petConfig;
         
-        alert('設定儲存成功！已直接套用您上傳的圖檔。');
+        const systemColorA = localStorage.getItem('theme_color_a') || '#4285f4';
+        const systemColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        
+        const petThemeColor = currentPet.accentColor || systemColorA;
+        
+        const root = document.documentElement;
+        root.style.setProperty('--primary', petThemeColor);
+        root.style.setProperty('--primary-dark', systemColorB);
+        root.style.setProperty('--modal-theme', petThemeColor);
+        
+        const brightness = getBrightness(petThemeColor);
+        root.style.setProperty('--text-on-primary', brightness > 180 ? '#333333' : '#ffffff');
     }
 
-    window.onload = loadPetConfig;
+    function getBrightness(hex) {
+        try {
+            const h = hex.replace('#', '');
+            const r = parseInt(h.substring(0, 2), 16);
+            const g = parseInt(h.substring(2, 4), 16);
+            const b = parseInt(h.substring(4, 6), 16);
+            return (r * 299 + g * 587 + b * 114) / 1000;
+        } catch (e) { return 0; }
+    }
+
+    function showNotify(title, msg) {
+        const modal = document.getElementById('customModal');
+        document.getElementById('modalHeader').innerText = title;
+        document.getElementById('modalBody').innerText = msg;
+        const footer = document.getElementById('modalFooter');
+        footer.innerHTML = `<button class="modal-btn" onclick="closeModal()">確定</button>`;
+        modal.style.display = 'flex';
+    }
+    function closeModal() { document.getElementById('customModal').style.display = 'none'; }
+
+    document.getElementById('petEffectTextInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            this.blur();
+        }
+    });
+
+    function initSettings() {
+        const localData = localStorage.getItem('desktop_pet');
+        if (localData) {
+            petConfig = JSON.parse(localData);
+        } else {
+            localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+        }
+
+        document.getElementById('petToggle').checked = petConfig.enabled;
+        
+        // 初始化拉桿數值
+        const currentSize = petConfig.size || 110;
+        document.getElementById('petSizeSlider').value = currentSize;
+        document.getElementById('sizeValue').innerText = currentSize + " px";
+        document.getElementById('petPreviewImg').style.width = currentSize + "px";
+
+        // 初始化文字輸入框內容
+        document.getElementById('petEffectTextInput').value = petConfig.effectText || '❤️';
+
+        refreshPreviews();
+        bindDragPreviewEvents(); // 💡 初始化繫結拖曳測試監聽
+    }
+
+    function refreshPreviews() {
+        const defaultImg = 'https://via.placeholder.com/100?text=🐾';
+        // 只有在非互動與非按住的靜止狀態下才去複寫 src
+        if (!isInteracting) {
+            document.getElementById('petPreviewImg').src = petConfig.idleImg || defaultImg;
+        }
+
+        setupBoxPreview('imgIdlePreview', petConfig.idleImg);
+        setupBoxPreview('imgActivePreview', petConfig.activeImg);
+        setupBoxPreview('imgDragPreview', petConfig.dragImg);
+    }
+
+    // 💡 新增：在大預覽圖綁定按住不放的測試事件，完美模擬「拖曳時持續顯示拖曳圖，放開恢復」
+    function bindDragPreviewEvents() {
+        const previewImg = document.getElementById('petPreviewImg');
+        const defaultImg = 'https://via.placeholder.com/100?text=🐾';
+
+        const startDragPreview = (e) => {
+            if (isInteracting) return;
+            // 如果有設定拖曳圖，就顯示拖曳圖；沒有的話就用靜止圖備用
+            previewImg.src = petConfig.dragImg || petConfig.idleImg || defaultImg;
+        };
+
+        const stopDragPreview = () => {
+            if (isInteracting) return;
+            previewImg.src = petConfig.idleImg || defaultImg;
+        };
+
+        // 滑鼠事件
+        previewImg.addEventListener('mousedown', startDragPreview);
+        window.addEventListener('mouseup', stopDragPreview); // 在 window 監聽放開，防止滑鼠滑出外面時卡住
+
+        // 行動裝置觸控事件
+        previewImg.addEventListener('touchstart', startDragPreview, { passive: true });
+        window.addEventListener('touchend', stopDragPreview, { passive: true });
+    }
+
+    function setupBoxPreview(imgId, srcValue) {
+        const imgEl = document.getElementById(imgId);
+        if(srcValue && !srcValue.includes('placeholder.com')) {
+            imgEl.src = srcValue;
+            imgEl.style.display = 'block';
+        } else {
+            imgEl.style.display = 'none';
+        }
+    }
+
+    function triggerUpload(inputId) {
+        document.getElementById(inputId).click();
+    }
+
+    function handleImageUpload(input, configKey) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                petConfig[configKey] = e.target.result; 
+                localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+                localStorage.setItem('pet_sync_trigger', Date.now()); 
+                refreshPreviews();
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function updatePetSize(val) {
+        document.getElementById('sizeValue').innerText = val + " px";
+        document.getElementById('petPreviewImg').style.width = val + "px";
+        
+        petConfig.size = parseInt(val);
+        localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+        localStorage.setItem('pet_sync_trigger', Date.now()); 
+    }
+
+    function updateEffectText(val) {
+        const trimmed = val.trim();
+        petConfig.effectText = trimmed || '❤️';
+        localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+        localStorage.setItem('pet_sync_trigger', Date.now());
+    }
+
+    function togglePet(checkbox) {
+        petConfig.enabled = checkbox.checked;
+        localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+        localStorage.setItem('pet_sync_trigger', Date.now());
+
+        if(petConfig.enabled) {
+            showNotify("精靈召喚", "精靈已浮現在桌面，你可以對它自由拖曳移動與縮放！");
+        } else {
+            showNotify("精靈收回", "精靈已回到中心休息。");
+        }
+    }
+
+    function interactWithPet() {
+        if (isInteracting) return;
+        isInteracting = true;
+
+        const imgEl = document.getElementById('petPreviewImg');
+        const defaultActive = 'https://via.placeholder.com/100?text=❤️';
+        
+        // 切換為互動點擊圖
+        imgEl.src = petConfig.activeImg || petConfig.idleImg || defaultActive;
+        
+        // 💡 修正：將互動圖維持顯示的時間從 1000ms 延長至 2000ms (2秒)
+        setTimeout(() => { 
+            isInteracting = false;
+            imgEl.src = petConfig.idleImg || 'https://via.placeholder.com/100?text=🐾'; 
+        }, 2000);
+        
+        const currentText = document.getElementById('petEffectTextInput').value || '❤️';
+        showNotify("互動成功", "精靈開心地對你發出 " + currentText);
+    }
+
+    window.addEventListener('storage', (e) => {
+        if (e.key && (e.key.includes('color') || e.key === 'desktop_pet' || e.key === 'pet_sync_trigger')) {
+            applyTheme();
+        }
+    });
+
+    window.onload = () => { 
+        initSettings(); 
+        applyTheme(); 
+    };
 </script>
 </body>
 </html>

@@ -20,7 +20,7 @@
             overflow: hidden;
         }
 
-        /* 標題列：同步自 Settings 的漸層 */
+        /* 標題列：優先同步屬於桌寵的獨立主題色 */
         .app-bar { 
             padding: calc(env(safe-area-inset-top) + 15px) 15px 15px; 
             background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
@@ -155,7 +155,7 @@
         </div>
     </div>
 
-    <!-- 💡 新增：尺寸拉桿卡片 -->
+    <!-- 尺寸拉桿卡片 -->
     <div class="setting-card">
         <div class="setting-info" style="width:100%">
             <h4>精靈顯示大小</h4>
@@ -167,7 +167,7 @@
         </div>
     </div>
 
-    <!-- 💡 新增：相簿風格三態外觀上傳區塊 -->
+    <!-- 相簿風格三態外觀上傳區塊 -->
     <div class="setting-card">
         <div class="setting-info" style="width: 100%; margin-bottom: 5px;">
             <h4>自訂精靈動作外觀</h4>
@@ -224,17 +224,26 @@
         idleImg: 'https://via.placeholder.com/100?text=🐾',
         activeImg: 'https://via.placeholder.com/100?text=❤️',
         dragImg: '', 
-        effectText: '🐱喵~'
+        effectText: '🐱喵~',
+        accentColor: '#ff4d4d' // 預設獨立桌寵色
     };
 
+    // 💡 修正後的主題讀取：優先採用桌寵專屬色，並保持全域漸層同步
     function applyTheme() {
+        // 從本機取得最新桌寵狀態，確認其中包含的專屬選色
+        const currentPet = JSON.parse(localStorage.getItem('desktop_pet')) || petConfig;
         const systemColorA = localStorage.getItem('theme_color_a') || '#4285f4';
+        
+        // 分流抉擇：若有設定桌寵色就使用，沒有則沿用全域主色
+        const petThemeColor = currentPet.accentColor || systemColorA;
         const systemColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        
         const root = document.documentElement;
-        root.style.setProperty('--primary', systemColorA);
+        root.style.setProperty('--primary', petThemeColor);
         root.style.setProperty('--primary-dark', systemColorB);
-        root.style.setProperty('--modal-theme', systemColorA);
-        const brightness = getBrightness(systemColorA);
+        root.style.setProperty('--modal-theme', petThemeColor);
+        
+        const brightness = getBrightness(petThemeColor);
         root.style.setProperty('--text-on-primary', brightness > 180 ? '#333333' : '#ffffff');
     }
 
@@ -340,8 +349,11 @@
         showNotify("互動成功", "精靈開心地對你發出 " + (petConfig.effectText || '❤️'));
     }
 
+    // 💡 調整監聽事件，不論是修改系統全域顏色，還是修改特定的 desktop_pet 色彩，都會即時重新渲染畫面
     window.addEventListener('storage', (e) => {
-        if (e.key && e.key.includes('color')) applyTheme();
+        if (e.key && (e.key.includes('color') || e.key === 'desktop_pet')) {
+            applyTheme();
+        }
     });
 
     window.onload = () => { applyTheme(); initSettings(); };

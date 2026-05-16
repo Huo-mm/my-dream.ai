@@ -19,6 +19,7 @@
             background-color: var(--color-a);
             background-image: linear-gradient(180deg, var(--color-a), var(--color-b));
             background-size: cover; background-position: center;
+            background-attachment: fixed; /* 讓背景保持固定不隨網頁滾動 */
             -webkit-touch-callout: none !important; 
             -webkit-user-select: none !important; 
             user-select: none !important;
@@ -26,6 +27,7 @@
             overscroll-behavior-y: contain; 
             overflow-x: hidden;
             overflow-y: auto;
+            transition: background 0.3s ease; /* 換色或清除桌布時有絲滑的過渡感 */
         }
 
         #status-bar {
@@ -53,7 +55,7 @@
             -webkit-touch-callout: none !important;
             -webkit-user-select: none !important;
             user-select: none !important;
-            -webkit-user-drag: none !important; /* 阻止 iOS 內建的拖曳快照行為 */
+            -webkit-user-drag: none !important;
         }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
 
@@ -131,16 +133,29 @@
 <div id="desktop_pet_widget" class="pet-widget"></div>
 
 <script>
+    // 💡 核心修正：將背景選色器設定與無桌布桌面完美串接
     function applyTheme() {
-        const colorA = localStorage.getItem('theme_color_a') || '#4285f4';
-        const colorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        const sysColorA = localStorage.getItem('theme_color_a') || '#4285f4';
+        const sysColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        
+        // 讀取自定義頁面的「桌面背景色」卡片設定，若沒設定過，預設自動跟隨系統圖示主色與漸層
+        const bgColorA = localStorage.getItem('bg_color_a') || sysColorA;
+        const bgColorB = localStorage.getItem('bg_color_b') || sysColorB;
+        
         const wallpaper = localStorage.getItem('active_wallpaper');
-        document.documentElement.style.setProperty('--color-a', colorA);
-        document.documentElement.style.setProperty('--color-b', colorB);
-        if (wallpaper) {
+        const bgStyle = localStorage.getItem('bg_style') || 'gradient';
+
+        // 系統變數主要控制圖示顏色 (這部分維持不變)
+        document.documentElement.style.setProperty('--color-a', sysColorA);
+        document.documentElement.style.setProperty('--color-b', sysColorB);
+
+        // 桌布分流邏輯
+        if (bgStyle === 'wallpaper' && wallpaper) {
+            // 有桌布圖片時：優先顯示大圖桌布
             document.body.style.backgroundImage = `url(${wallpaper})`;
         } else {
-            document.body.style.backgroundImage = `linear-gradient(180deg, ${colorA}, ${colorB})`;
+            // 沒有桌布圖片（或是手動恢復漸層）時：完美連結自定義頁面的「桌面背景 A/B」！
+            document.body.style.backgroundImage = `linear-gradient(180deg, ${bgColorA}, ${bgColorB})`;
         }
     }
 
@@ -225,7 +240,6 @@
         petEl.style.left = savedX + 'px';
         petEl.style.top = savedY + 'px';
 
-        // 💡 修正：禁用桌寵圖片點擊時的右鍵/長按選單
         img.addEventListener('contextmenu', (e) => e.preventDefault());
 
         img.onmousedown = (e) => {
@@ -261,7 +275,6 @@
         const img = petEl.querySelector('img');
         const defaultImg = 'https://via.placeholder.com/100?text=PET';
 
-        // 💡 修正：桌寵外框也阻斷右鍵/長按選單
         petEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
         petEl.ontouchstart = (e) => {
@@ -305,7 +318,6 @@
     function setupAppDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
         
-        // 💡 修正：直接阻斷該 App 圖示連結的所有長按彈出選單事件
         el.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             return false;
@@ -338,7 +350,6 @@
                 clearTimeout(dragTimeout);
                 return;
             }
-            // 💡 修正：一旦進入長按拖曳狀態，強制阻止所有瀏覽器預設選單或快照動作
             if (e.cancelable) e.preventDefault(); 
             const touch = e.touches[0];
             if(window._activeClone) {
@@ -415,8 +426,9 @@
             now.getMinutes().toString().padStart(2, '0');
     }
 
+    // 💡 擴充監聽條件，讓 bg_color_a, bg_color_b 與 bg_style 更動時即時渲染
     window.addEventListener('storage', (e) => {
-        if (['pet_sync_trigger', 'desktop_pet', 'theme_color_a', 'active_wallpaper'].includes(e.key)) {
+        if (['pet_sync_trigger', 'desktop_pet', 'theme_color_a', 'theme_color_b', 'bg_color_a', 'bg_color_b', 'bg_style', 'active_wallpaper'].includes(e.key)) {
             applyTheme();
             renderFloatingPet();
         }

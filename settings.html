@@ -11,7 +11,6 @@
             margin: 0; background: var(--bg); font-family: -apple-system, sans-serif;
             padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 30px);
             color: #333;
-            /* 💡 移除 background 的 transition，保持設定頁本身背景色（#f4f4f9）清爽乾淨 */
         }
         .header { display: flex; align-items: center; margin-bottom: 25px; }
         .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; color: #333; }
@@ -168,7 +167,6 @@
         }
     }
 
-    // 💡 核心邏輯：控制選色器和圖示外觀。沒選獨立色時，APP 圖示會自動跟隨最上方「全系統圖示主色」
     function updatePickersAndIcons() {
         const globalMainColor = localStorage.getItem('theme_color_a') || '#007aff';
 
@@ -201,14 +199,7 @@
         document.documentElement.style.setProperty('--primary', primaryColor);
         document.documentElement.style.setProperty('--modal-theme', modalColor);
 
-        /* 
-           💡 【重磅修正！】
-           移除原先對 document.body.style.background 的覆寫！
-           這樣本頁面就能乾乾淨淨地保持獨立的網頁背景色（#f4f4f9）。
-           「桌面背景色」卡片裡的顏色更動，會純粹刷新下方圓形選色圈的顏色，不干擾主題 App 本身。
-        */
-
-        // 刷新包含桌面背景 A/B 在內的所有頂部/系統組件圓圈顏色
+        // 刷新這頁所有圓形小選色圈的顏色
         ['sysColorA', 'sysColorB', 'colorModal', 'bgColorA', 'bgColorB'].forEach(id => {
             const input = document.getElementById(id);
             const wrapper = document.getElementById('pw-' + id);
@@ -285,6 +276,7 @@
         });
     }
 
+    // 💡 點選恢復漸層背景時，把 bg_style 設回 gradient，並移除 active_wallpaper
     function clearWallpaper() {
         localStorage.removeItem('active_wallpaper');
         localStorage.setItem('bg_style', 'gradient');

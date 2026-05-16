@@ -11,7 +11,7 @@
             margin: 0; background: var(--bg); font-family: -apple-system, sans-serif;
             padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 30px);
             color: #333;
-            transition: background 0.3s ease;
+            /* 💡 移除 background 的 transition，保持設定頁本身背景色（#f4f4f9）清爽乾淨 */
         }
         .header { display: flex; align-items: center; margin-bottom: 25px; }
         .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; color: #333; }
@@ -153,7 +153,6 @@
         `).join('');
     }
 
-    // 💡 當圖示主色發生變動時，重新刷新讓所有「沒有獨立顏色」的 APP 圖示跟著同步
     function handleSystemColorAInput(value) {
         localStorage.setItem('theme_color_a', value);
         updatePickersAndIcons();
@@ -169,7 +168,7 @@
         }
     }
 
-    // 💡 提取出獨立邏輯：專門用來計算、重新指派選色器與圖示背景的顯示
+    // 💡 核心邏輯：控制選色器和圖示外觀。沒選獨立色時，APP 圖示會自動跟隨最上方「全系統圖示主色」
     function updatePickersAndIcons() {
         const globalMainColor = localStorage.getItem('theme_color_a') || '#007aff';
 
@@ -202,12 +201,14 @@
         document.documentElement.style.setProperty('--primary', primaryColor);
         document.documentElement.style.setProperty('--modal-theme', modalColor);
 
-        // 💡 修正背景色邏輯：這裡僅用來展示這組背景色漸層，回歸「純粹預覽」用途
-        const bgA = localStorage.getItem('bg_color_a') || primaryColor;
-        const bgB = localStorage.getItem('bg_color_b') || '#1a2a6c';
-        document.body.style.background = `linear-gradient(180deg, ${bgA}, ${bgB})`;
+        /* 
+           💡 【重磅修正！】
+           移除原先對 document.body.style.background 的覆寫！
+           這樣本頁面就能乾乾淨淨地保持獨立的網頁背景色（#f4f4f9）。
+           「桌面背景色」卡片裡的顏色更動，會純粹刷新下方圓形選色圈的顏色，不干擾主題 App 本身。
+        */
 
-        // 刷新頂部三個系統組件圓圈的顏色
+        // 刷新包含桌面背景 A/B 在內的所有頂部/系統組件圓圈顏色
         ['sysColorA', 'sysColorB', 'colorModal', 'bgColorA', 'bgColorB'].forEach(id => {
             const input = document.getElementById(id);
             const wrapper = document.getElementById('pw-' + id);
@@ -301,7 +302,6 @@
         document.getElementById('bgColorA').value = localStorage.getItem('bg_color_a') || globalMainColor;
         document.getElementById('bgColorB').value = localStorage.getItem('bg_color_b') || '#1a2a6c';
 
-        // 💡 載入時初次渲染顏色
         updatePickersAndIcons();
         refreshUI();
     };

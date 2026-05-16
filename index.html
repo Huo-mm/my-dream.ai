@@ -11,9 +11,9 @@
             --color-a: #4285f4; 
             --color-b: #1a2a6c; 
         }
-        
+
         html, body { margin: 0; padding: 0; height: 100%; width: 100%; background: #1a2a6c; }
-        
+
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
             background-color: var(--color-a);
@@ -40,12 +40,13 @@
             grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); 
             gap: 10px; padding: 10px 20px; box-sizing: border-box;
             grid-auto-flow: dense; 
+            z-index: 5; /* 確保 App 網格有基礎層級 */
         }
 
         .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: pan-y; }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
-        
+
         .icon-box { 
             width: 55px; height: 55px; border-radius: 14px; 
             display: flex; justify-content: center; align-items: center; 
@@ -54,18 +55,26 @@
             background: linear-gradient(135deg, var(--color-a), var(--color-b)) !important; 
         }
 
-        /* 桌寵外觀：完全獨立浮空、大小改由 JS 即時動態控管 */
+        /* 💡 修正：桌寵最外層框架。z-index 調高，但核心是設定 pointer-events: none 讓點擊直接穿透！ */
         .pet-widget {
             position: fixed;
             display: flex; justify-content: center; align-items: center;
-            touch-action: none; z-index: 999;
+            touch-action: none; 
+            z-index: 9999; /* 浮在最上層 */
             cursor: grab;
             display: none;
+            pointer-events: none !important; /* 👈 透明區域完全不攔截滑鼠與觸控 */
         }
-        .pet-widget img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
         
+        /* 💡 修正：只有真正點到桌寵圖片本身時，才恢復有點擊權限 */
+        .pet-widget img { 
+            width: 100%; height: 100%; 
+            object-fit: contain; 
+            pointer-events: auto !important; /* 👈 點擊圖片本體能正常動態互動 */
+        }
+
         .pet-effect {
-            position: absolute; pointer-events: none; z-index: 9999;
+            position: absolute; pointer-events: none; z-index: 10000;
             font-size: 30px; animation: petFloat 0.8s ease-out forwards;
         }
         @keyframes petFloat {
@@ -80,7 +89,12 @@
             transition: none !important; margin: 0 !important; will-change: transform, left, top;
         }
 
-        #dock { background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); margin: 0 20px calc(var(--safe-bottom) + 15px) 20px; padding: 12px; border-radius: 30px; display: flex; justify-content: space-around; flex-shrink: 0; }
+        #dock { 
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+            margin: 0 20px calc(var(--safe-bottom) + 15px) 20px; padding: 12px; border-radius: 30px; 
+            display: flex; justify-content: space-around; flex-shrink: 0; 
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -92,9 +106,6 @@
 
 <div id="home-screen"></div>
 
-<!-- 獨立於網格之外的桌寵實體 -->
-<div id="desktop_pet_widget" class="pet-widget"></div>
-
 <div id="dock">
     <a href="chat.html" style="text-decoration:none; font-size:26px;">💬</a>
     <a href="notes.html" style="text-decoration:none; font-size:26px;">📝</a>
@@ -102,6 +113,9 @@
     <a href="clock.html" style="text-decoration:none; font-size:26px;">⏰</a>
     <div onclick="location.reload()" style="cursor:pointer; font-size:26px;">🏠</div>
 </div>
+
+<!-- 💡 修正：將桌寵實體徹底移到網頁結構的最尾端（靠近 </body>），確保層級邏輯最完美 -->
+<div id="desktop_pet_widget" class="pet-widget"></div>
 
 <script>
     function applyTheme() {
@@ -132,7 +146,6 @@
         ];
     }
 
-    // 💡 修正：預設先給空陣列，稍後統一由載入函式判斷要讀快取還是預設值
     let appData = [];
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
@@ -161,11 +174,11 @@
         return a;
     }
 
-    // --- 獨立浮動桌寵核心邏輯（大小與多態外觀支援） ---
+    // --- 獨立浮動桌寵核心邏輯 ---
     function renderFloatingPet() {
         const petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || { enabled: false, size: 110 };
         const petEl = document.getElementById('desktop_pet_widget');
-        
+
         if (!petConfig.enabled) {
             petEl.style.display = 'none';
             return;
@@ -176,7 +189,7 @@
         petEl.style.width = petSize + 'px';
         petEl.style.height = petSize + 'px';
         petEl.innerHTML = '';
-        
+
         const img = document.createElement('img');
         const defaultImg = 'https://via.placeholder.com/100?text=PET';
         img.src = petConfig.idleImg || defaultImg;
@@ -191,12 +204,21 @@
         petEl.style.left = savedX + 'px';
         petEl.style.top = savedY + 'px';
 
-        // 點擊互動 -> 切換為點擊圖
-        petEl.addEventListener('mousedown', (e) => {
+        // 點擊互動 -> 切換為點擊圖（因為點擊被綁在 img 本身，這次絕不干擾背景 App 觸控）
+        img.addEventListener('mousedown', (e) => {
             img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
             spawnPetEffect(e.clientX, e.clientY, petConfig.effectText);
             setTimeout(() => { img.src = petConfig.idleImg || defaultImg; }, 1000);
         });
+
+        // 手機觸控點擊互動支援
+        img.addEventListener('touchstart', (e) => {
+            // 如果不是在大幅度拖曳，單純點擊就發出特效
+            img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
+            const touch = e.touches[0];
+            spawnPetEffect(touch.clientX, touch.clientY, petConfig.effectText);
+            setTimeout(() => { img.src = petConfig.idleImg || defaultImg; }, 1000);
+        }, {passive: true});
 
         setupPetFloatingDragging(petEl, petConfig);
     }
@@ -221,8 +243,7 @@
             const touch = e.touches[0];
             pX = touch.clientX - petEl.offsetLeft;
             pY = touch.clientY - petEl.offsetTop;
-            
-            // 💡 進入移動狀態：若有上傳移動圖，即時切換外觀
+
             const img = petEl.querySelector('img');
             if (img) img.src = config.dragImg || config.activeImg || config.idleImg;
         }, {passive: true});
@@ -234,7 +255,6 @@
             let targetX = touch.clientX - pX;
             let targetY = touch.clientY - pY;
 
-            // 以自訂尺寸動態計算螢幕邊界限制
             targetX = Math.max(0, Math.min(window.innerWidth - petSize, targetX));
             targetY = Math.max(0, Math.min(window.innerHeight - petSize, targetY));
 
@@ -245,8 +265,7 @@
         petEl.addEventListener('touchend', () => {
             if (!isMoving) return;
             isMoving = false;
-            
-            // 💡 結束移動狀態：變回原本的靜止外觀
+
             const img = petEl.querySelector('img');
             if (img) img.src = config.idleImg || 'https://via.placeholder.com/100?text=PET';
 
@@ -358,7 +377,6 @@
         }
     });
 
-    // 💡 修正：建立獨立的排版讀取控制機制，確保隨時同步緩存的 App 位置
     function loadAndInitLayout() {
         applyTheme();
         const savedLayout = localStorage.getItem('desktop_layout_ordered');
@@ -370,7 +388,6 @@
         initDesktop();
     }
 
-    // 💡 修正：將原本直接載入改為透過機制載入
     window.onfocus = () => { loadAndInitLayout(); };
     window.onload = () => { 
         loadAndInitLayout(); 

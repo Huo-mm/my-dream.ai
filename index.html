@@ -19,7 +19,6 @@
             background-color: var(--color-a);
             background-image: linear-gradient(180deg, var(--color-a), var(--color-b));
             background-size: cover; background-position: center;
-            /* 💡 核心修正：全域禁用長按彈出選單與文字選取 */
             -webkit-touch-callout: none !important; 
             -webkit-user-select: none !important; 
             user-select: none !important;
@@ -48,13 +47,13 @@
 
         .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         
-        /* 💡 核心修正：針對 App 圖示連結禁用長按選單與反白 */
         .app-icon { 
             display: flex; flex-direction: column; align-items: center; 
             text-decoration: none; color: white; width: 100%; touch-action: pan-y; 
             -webkit-touch-callout: none !important;
             -webkit-user-select: none !important;
             user-select: none !important;
+            -webkit-user-drag: none !important; /* 阻止 iOS 內建的拖曳快照行為 */
         }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
 
@@ -66,7 +65,7 @@
             background: linear-gradient(135deg, var(--color-a), var(--color-b)) !important; 
         }
 
-        /* 桌寵外框：點擊穿透 */
+        /* 桌寵外框 */
         .pet-widget {
             position: fixed;
             display: flex; justify-content: center; align-items: center;
@@ -77,8 +76,7 @@
             pointer-events: none !important; 
         }
         
-        /* 桌寵圖片本體：接收點擊 */
-        /* 💡 核心修正：針對桌寵圖片禁用長按儲存圖片選單 */
+        /* 桌寵圖片本體 */
         .pet-widget img { 
             width: 100%; height: 100%; 
             object-fit: contain; 
@@ -86,6 +84,7 @@
             -webkit-touch-callout: none !important;
             -webkit-user-select: none !important;
             user-select: none !important;
+            -webkit-user-drag: none !important;
         }
 
         .pet-effect {
@@ -226,6 +225,9 @@
         petEl.style.left = savedX + 'px';
         petEl.style.top = savedY + 'px';
 
+        // 💡 修正：禁用桌寵圖片點擊時的右鍵/長按選單
+        img.addEventListener('contextmenu', (e) => e.preventDefault());
+
         img.onmousedown = (e) => {
             img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
             spawnPetEffect(e.clientX, e.clientY, petConfig.effectText);
@@ -258,6 +260,9 @@
         const petSize = config.size || 110;
         const img = petEl.querySelector('img');
         const defaultImg = 'https://via.placeholder.com/100?text=PET';
+
+        // 💡 修正：桌寵外框也阻斷右鍵/長按選單
+        petEl.addEventListener('contextmenu', (e) => e.preventDefault());
 
         petEl.ontouchstart = (e) => {
             isMoving = true;
@@ -300,6 +305,12 @@
     function setupAppDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
         
+        // 💡 修正：直接阻斷該 App 圖示連結的所有長按彈出選單事件
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
+        });
+
         el.addEventListener('touchstart', (e) => {
             clearTimeout(dragTimeout); 
             const touch = e.touches[0];
@@ -327,6 +338,7 @@
                 clearTimeout(dragTimeout);
                 return;
             }
+            // 💡 修正：一旦進入長按拖曳狀態，強制阻止所有瀏覽器預設選單或快照動作
             if (e.cancelable) e.preventDefault(); 
             const touch = e.touches[0];
             if(window._activeClone) {

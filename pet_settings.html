@@ -3,31 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>桌寵實驗室</title>
+    <title>桌寵設定</title>
     <style>
         :root { --primary: #673ab7; --bg: #f5f5f7; }
         body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); color: #333; }
-        .app-bar { padding: calc(env(safe-area-inset-top) + 15px) 20px 15px; background: var(--primary); color: white; display: flex; align-items: center; }
+        
+        .app-bar { 
+            padding: calc(env(safe-area-inset-top) + 15px) 20px 15px;
+            background: var(--primary); color: white; display: flex; align-items: center; 
+        }
         .app-bar a { color: white; text-decoration: none; font-weight: bold; margin-right: 15px; }
+
         .container { padding: 20px; }
-        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .card { 
+            background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
         h3 { margin-top: 0; color: var(--primary); font-size: 16px; }
         
-        /* 開關樣式 */
-        .switch-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #2ecc71; }
-        input:checked + .slider:before { transform: translateX(24px); }
+        .upload-group { margin-bottom: 20px; }
+        label { display: block; font-size: 13px; color: #666; margin-bottom: 8px; }
+        input[type="file"] { width: 100%; font-size: 14px; }
+        input[type="text"] { 
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; 
+            font-size: 16px; box-sizing: border-box;
+        }
 
-        .upload-group { margin-bottom: 15px; }
-        label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; }
         .preview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
-        .preview-box { background: #eee; border-radius: 10px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 10px; color: #999; }
+        .preview-box { background: #eee; border-radius: 10px; aspect-ratio: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .btn-save { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 15px; font-weight: bold; font-size: 16px; margin-top: 10px; }
+        
+        .btn-save {
+            background: var(--primary); color: white; border: none; width: 100%;
+            padding: 15px; border-radius: 15px; font-weight: bold; font-size: 16px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -39,58 +49,55 @@
 
 <div class="container">
     <div class="card">
-        <div class="switch-group">
-            <h3 style="margin:0">喚醒桌寵喵？</h3>
-            <label class="switch">
-                <input type="checkbox" id="petStatusToggle">
-                <span class="slider"></span>
-            </label>
-        </div>
-        <p style="font-size: 12px; color: #888; margin-top: 10px;">開啟後，寵物會出現在桌面網格中。</p>
+        <h3>✨ 特效設定</h3>
+        <label>點擊噴出的文字或 Emoji</label>
+        <input type="text" id="effectInput" placeholder="例如: ❤️ 或 喵">
     </div>
 
     <div class="card">
-        <h3>✨ 特效與圖片</h3>
+        <h3>🖼️ 圖片更換</h3>
         <div class="upload-group">
-            <label>點擊文字</label>
-            <input type="text" id="effectInput" placeholder="❤️" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd;">
+            <label>1. 平時靜置 (Idle)</label>
+            <input type="file" accept="image/*" onchange="processFile(this, 'idleImg')">
         </div>
         <div class="upload-group">
-            <label>靜置圖 (Idle)</label><input type="file" onchange="processFile(this, 'idleImg')">
+            <label>2. 點擊瞬間 (Active)</label>
+            <input type="file" accept="image/*" onchange="processFile(this, 'activeImg')">
         </div>
         <div class="upload-group">
-            <label>點擊圖 (Active)</label><input type="file" onchange="processFile(this, 'activeImg')">
+            <label>3. 搬運移動 (Dragging)</label>
+            <input type="file" accept="image/*" onchange="processFile(this, 'dragImg')">
         </div>
-        <div class="upload-group">
-            <label>移動圖 (Drag)</label><input type="file" onchange="processFile(this, 'dragImg')">
-        </div>
+        
         <div class="preview-grid">
             <div class="preview-box" id="pre-idle">無</div>
             <div class="preview-box" id="pre-active">無</div>
             <div class="preview-box" id="pre-drag">無</div>
         </div>
     </div>
-    <button class="btn-save" onclick="saveSettings()">儲存設定</button>
+
+    <button class="btn-save" onclick="saveSettings()">儲存並套用</button>
 </div>
 
 <script>
-    let config = JSON.parse(localStorage.getItem('desktop_pet')) || {
-        enabled: false, // 預設關閉
+    let tempConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {
         effectText: '❤️',
         idleImg: '', activeImg: '', dragImg: ''
     };
 
+    // 初始化顯示
     window.onload = () => {
-        document.getElementById('petStatusToggle').checked = config.enabled;
-        document.getElementById('effectInput').value = config.effectText;
+        document.getElementById('effectInput').value = tempConfig.effectText;
         updatePreviews();
     };
 
     function processFile(input, type) {
         const file = input.files[0];
+        if (!file) return;
+        
         const reader = new FileReader();
         reader.onload = (e) => {
-            config[type] = e.target.result;
+            tempConfig[type] = e.target.result;
             updatePreviews();
         };
         reader.readAsDataURL(file);
@@ -99,17 +106,16 @@
     function updatePreviews() {
         ['idleImg', 'activeImg', 'dragImg'].forEach(type => {
             const box = document.getElementById('pre-' + type.replace('Img','').toLowerCase());
-            if (config[type]) box.innerHTML = `<img src="${config[type]}">`;
+            if (tempConfig[type]) {
+                box.innerHTML = `<img src="${tempConfig[type]}">`;
+            }
         });
     }
 
     function saveSettings() {
-        config.enabled = document.getElementById('petStatusToggle').checked;
-        config.effectText = document.getElementById('effectInput').value || '❤️';
-        localStorage.setItem('desktop_pet', JSON.stringify(config));
-        // 同步通知桌面
-        localStorage.setItem('pet_sync_trigger', Date.now()); 
-        alert('設定已儲存喵！');
+        tempConfig.effectText = document.getElementById('effectInput').value || '❤️';
+        localStorage.setItem('desktop_pet', JSON.stringify(tempConfig));
+        alert('同步成功！快回桌面看看吧喵～');
     }
 </script>
 </body>

@@ -108,7 +108,7 @@
         }
         .btn-action:active { transform: scale(0.98); }
 
-        /* 系統通知彈窗：同步相簿樣式 */
+        /* 系統通知彈窗 */
         #customModal {
             display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
             background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;
@@ -217,26 +217,27 @@
 </div>
 
 <script>
-    // 預設與初始化結構擴充 size 與 dragImg
-    let petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {
+    // 全域基礎結構（備用）
+    let petConfig = {
         enabled: false,
         size: 110,
         idleImg: 'https://via.placeholder.com/100?text=🐾',
         activeImg: 'https://via.placeholder.com/100?text=❤️',
         dragImg: '', 
         effectText: '🐱喵~',
-        accentColor: '#ff4d4d' // 預設獨立桌寵色
+        accentColor: '#ff4d4d'
     };
 
-    // 💡 修正後的主題讀取：優先採用桌寵專屬色，並保持全域漸層同步
+    // 💡 修正後的主題讀取：每次呼叫都強制重取最新的本地資料，確保顏色即時同步
     function applyTheme() {
-        // 從本機取得最新桌寵狀態，確認其中包含的專屬選色
-        const currentPet = JSON.parse(localStorage.getItem('desktop_pet')) || petConfig;
-        const systemColorA = localStorage.getItem('theme_color_a') || '#4285f4';
+        const localData = localStorage.getItem('desktop_pet');
+        let currentPet = localData ? JSON.parse(localData) : petConfig;
         
-        // 分流抉擇：若有設定桌寵色就使用，沒有則沿用全域主色
-        const petThemeColor = currentPet.accentColor || systemColorA;
+        const systemColorA = localStorage.getItem('theme_color_a') || '#4285f4';
         const systemColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        
+        // 核心抉擇點：如果 desktop_pet 裡面有選色，就用它；否則退回系統主色
+        const petThemeColor = currentPet.accentColor || systemColorA;
         
         const root = document.documentElement;
         root.style.setProperty('--primary', petThemeColor);
@@ -268,6 +269,14 @@
     function closeModal() { document.getElementById('customModal').style.display = 'none'; }
 
     function initSettings() {
+        // 從本機讀取最新的完整設定
+        const localData = localStorage.getItem('desktop_pet');
+        if (localData) {
+            petConfig = JSON.parse(localData);
+        } else {
+            localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+        }
+
         document.getElementById('petToggle').checked = petConfig.enabled;
         
         // 初始化拉桿數值
@@ -303,28 +312,26 @@
         document.getElementById(inputId).click();
     }
 
-    // 處理相簿相片上傳，轉為 base64 存入 localStorage
     function handleImageUpload(input, configKey) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
-                petConfig[configKey] = e.target.result; // base64 碼
+                petConfig[configKey] = e.target.result; 
                 localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
-                localStorage.setItem('pet_sync_trigger', Date.now()); // 即時通知首頁
+                localStorage.setItem('pet_sync_trigger', Date.now()); 
                 refreshPreviews();
             };
             reader.readAsDataURL(input.files[0]);
         }
     }
 
-    // 拉桿調整大小即時反應
     function updatePetSize(val) {
         document.getElementById('sizeValue').innerText = val + " px";
         document.getElementById('petPreviewImg').style.width = val + "px";
         
         petConfig.size = parseInt(val);
         localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
-        localStorage.setItem('pet_sync_trigger', Date.now()); // 即時通知首頁尺寸改變
+        localStorage.setItem('pet_sync_trigger', Date.now()); 
     }
 
     function togglePet(checkbox) {
@@ -349,14 +356,18 @@
         showNotify("互動成功", "精靈開心地對你發出 " + (petConfig.effectText || '❤️'));
     }
 
-    // 💡 調整監聽事件，不論是修改系統全域顏色，還是修改特定的 desktop_pet 色彩，都會即時重新渲染畫面
+    // 跨頁面同步事件監聽
     window.addEventListener('storage', (e) => {
-        if (e.key && (e.key.includes('color') || e.key === 'desktop_pet')) {
+        if (e.key && (e.key.includes('color') || e.key === 'desktop_pet' || e.key === 'pet_sync_trigger')) {
             applyTheme();
         }
     });
 
-    window.onload = () => { applyTheme(); initSettings(); };
+    // 💡 調整調整載入順序：先初始設定讀完 localStorage，再套用顏色主題
+    window.onload = () => { 
+        initSettings(); 
+        applyTheme(); 
+    };
 </script>
 </body>
 </html>

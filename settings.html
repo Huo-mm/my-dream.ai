@@ -87,21 +87,7 @@
     <button class="btn btn-primary" id="syncBtn" onclick="confirmSync()">一鍵同步全系統為圖示主色</button>
 </div>
 
-<div class="card">
-    <div class="card-title">🐾 桌寵 App 特效主題</div>
-    <div class="app-row">
-        <div class="app-info">
-            <div id="iconPet" class="app-icon" style="background: #ff4d4d;">🐾</div>
-            <div>
-                <div style="font-size:14px; font-weight:600;">桌寵獨立色</div>
-                <div style="font-size:11px; color:#888;">影響特效與 App 內部按鈕</div>
-            </div>
-        </div>
-        <div class="picker-wrapper" id="pw-petAccent">
-            <input type="color" id="petAccent" oninput="savePetColor(this.value)">
-        </div>
-    </div>
-</div>
+<!-- 💡 移除原本獨立的桌寵卡片，直接合併至下方 APP 選色中 -->
 
 <div class="card">
     <div class="card-title">📱 APP 選色</div>
@@ -142,6 +128,7 @@
 </div>
 
 <script>
+    // 💡 將桌寵資料直接塞入 apps 陣列，並加上 isPet 標記做特殊格式處理
     const apps = [
         { id: 'AI', name: 'MINE', icon: '💬', key: 'app_ai_color_a', def: '#4285f4' },
         { id: 'Clock', name: '時鐘', icon: '⏰', key: 'app_clock_color_a', def: '#ff9500' },
@@ -150,7 +137,8 @@
         { id: 'Weather', name: '天氣', icon: '☁️', key: 'app_weather_color_a', def: '#5ac8fa' },
         { id: 'Mail', name: '信箱', icon: '✉️', key: 'app_mail_color_a', def: '#d44638' },
         { id: 'Archive', name: '記憶倉庫', icon: '📦', key: 'app_archive_color_a', def: '#5856d6' },
-        { id: 'Anniversary', name: '紀念日', icon: '📅', key: 'app_anniversary_color_a', def: '#ff2d55' } 
+        { id: 'Anniversary', name: '紀念日', icon: '📅', key: 'app_anniversary_color_a', def: '#ff2d55' },
+        { id: 'Pet', name: '桌寵設定', icon: '🐾', key: 'desktop_pet', def: '#ff4d4d', isPet: true }
     ];
 
     function initAppList() {
@@ -162,10 +150,20 @@
                     <div style="font-size:14px; font-weight:600;">${app.name}</div>
                 </div>
                 <div class="picker-wrapper" id="pw-color${app.id}">
-                    <input type="color" id="color${app.id}" oninput="saveLive('${app.key}', this.value)">
+                    <input type="color" id="color${app.id}" oninput="handleAppColorInput('${app.id}', this.value)">
                 </div>
             </div>
         `).join('');
+    }
+
+    // 💡 統一分流處理一般 App 與桌寵 App 的即時色彩更動
+    function handleAppColorInput(id, value) {
+        const app = apps.find(a => a.id === id);
+        if (app.isPet) {
+            savePetColor(value);
+        } else {
+            saveLive(app.key, value);
+        }
     }
 
     function refreshUI() {
@@ -186,24 +184,22 @@
             if(wrapper) wrapper.style.backgroundColor = input.value;
         });
 
-        // App 圖示背景更新
+        // App 與桌寵圖示背景同步更新
         apps.forEach(app => {
             const el = document.getElementById('color' + app.id);
             if(el) document.getElementById('icon' + app.id).style.background = el.value;
         });
 
-        // ✨ 桌寵圖示背景更新
-        const petColor = document.getElementById('petAccent').value;
-        document.getElementById('iconPet').style.background = petColor;
-
         if(document.getElementById('syncBtn')) document.getElementById('syncBtn').style.background = primaryColor;
     }
 
-    // ✨ 專門處理桌寵物件格式的儲存
     function savePetColor(value) {
         let petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {};
         petConfig.accentColor = value;
         localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+        
+        // 💡 觸發主頁面監聽事件，讓桌寵設定即時連動
+        localStorage.setItem('pet_sync_trigger', Date.now()); 
         refreshUI();
     }
 
@@ -234,17 +230,18 @@
     function confirmSync() {
         showModal("一鍵同步", "確定要將所有 APP、背景色與桌寵色統一為主色調嗎？", () => {
             const mainColor = document.getElementById('sysColorA').value;
-            
-            // 同步一般 App
-            apps.forEach(app => {
-                localStorage.setItem(app.key, mainColor);
-                const input = document.getElementById('color' + app.id);
-                if(input) input.value = mainColor;
-            });
 
-            // ✨ 同步桌寵色
-            savePetColor(mainColor);
-            document.getElementById('petAccent').value = mainColor;
+            // 同步一般 App 與桌寵色
+            apps.forEach(app => {
+                const input = document.getElementById('color' + app.id);
+                if (app.isPet) {
+                    savePetColor(mainColor);
+                    if(input) input.value = mainColor;
+                } else {
+                    localStorage.setItem(app.key, mainColor);
+                    if(input) input.value = mainColor;
+                }
+            });
 
             localStorage.setItem('theme_modal_color', mainColor);
             localStorage.setItem('bg_color_a', mainColor);
@@ -278,15 +275,17 @@
         document.getElementById('bgColorA').value = localStorage.getItem('bg_color_a') || globalMainColor;
         document.getElementById('bgColorB').value = localStorage.getItem('bg_color_b') || '#1a2a6c';
 
-        // ✨ 載入桌寵顏色
-        const petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || { accentColor: '#ff4d4d' };
-        document.getElementById('petAccent').value = petConfig.accentColor || '#ff4d4d';
-
+        // 初始化所有 APP（含桌寵）的選色器預設數值
         apps.forEach(app => {
             const input = document.getElementById('color' + app.id);
             if(input) {
-                const saved = localStorage.getItem(app.key);
-                input.value = saved || globalMainColor || app.def;
+                if (app.isPet) {
+                    const petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {};
+                    input.value = petConfig.accentColor || app.def;
+                } else {
+                    const saved = localStorage.getItem(app.key);
+                    input.value = saved || globalMainColor || app.def;
+                }
             }
         });
 

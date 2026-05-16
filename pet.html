@@ -13,7 +13,15 @@
             --modal-theme: #4285f4;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        /* 💡 增加全局防止長按與防選取，優化 App 體驗 */
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            -webkit-touch-callout: none; /* 💡 核心：封鎖 iOS 長按彈出選單 */
+            -webkit-user-select: none;   /* 💡 防止文字圖片被選取 */
+            user-select: none; 
+        }
+        
         body { 
             margin: 0; font-family: -apple-system, sans-serif; 
             background: var(--bg); display: flex; flex-direction: column; height: 100dvh; 
@@ -83,6 +91,8 @@
         .effect-text-input:focus {
             border-color: var(--modal-theme); background: white;
         }
+        /* 💡 輸入框允許使用者點擊選取自訂的文字 */
+        .effect-text-input { -webkit-user-select: text; user-select: text; }
 
         /* 相簿風格相片上傳區塊 */
         .upload-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 5px; }
@@ -92,7 +102,14 @@
             justify-content: center; gap: 6px; cursor: pointer; position: relative; overflow: hidden;
         }
         .upload-box:active { background: #f0f1f2; }
-        .upload-box img { width: 100%; height: 100%; object-fit: contain; position: absolute; top:0; left:0; }
+        .upload-box img { width: 100%; height: 100%; object-fit: contain; position: absolute; top:0; left:0; z-index: 2; pointer-events: none; }
+        
+        /* 💡 當格子裡有圖片顯示時，自動隱藏提示文字與圖標 */
+        .upload-box.has-img .icon,
+        .upload-box.has-img span {
+            display: none !important;
+        }
+        
         .upload-box span { font-size: 11px; color: #666; font-weight: 500; z-index: 1; text-align: center; padding: 0 4px; }
         .upload-box .icon { font-size: 20px; z-index: 1; }
         .upload-box input[type="file"] { display: none; }
@@ -106,7 +123,11 @@
         .preview-window {
             height: 200px; display: flex; align-items: center; justify-content: center; width: 100%;
         }
-        .preview-window img { height: auto; object-fit: contain; transition: width 0.1s ease; cursor: grab; user-select: none; -webkit-user-drag: none; }
+        .preview-window img { 
+            height: auto; object-fit: contain; transition: width 0.1s ease; cursor: grab; 
+            user-select: none; -webkit-user-drag: none;
+            pointer-events: auto; /* 確保能監聽事件 */
+        }
         .preview-window img:active { cursor: grabbing; }
 
         /* 按鈕：同步漸層 */
@@ -145,6 +166,43 @@
     </style>
 </head>
 <body>
+
+<script>
+    /* 💡 【效能極致優化】將主題讀取移到最頂端！在 HTML 身體剛加載時就執行，徹底消除進入網頁時的數秒 lag 與閃爍 */
+    let petConfig = {
+        enabled: false,
+        size: 110,
+        idleImg: 'https://via.placeholder.com/100?text=🐾',
+        activeImg: 'https://via.placeholder.com/100?text=❤️',
+        dragImg: '', 
+        effectText: '🐱喵~',
+        accentColor: '#ff4d4d'
+    };
+
+    function applyThemeImmediate() {
+        const localData = localStorage.getItem('desktop_pet');
+        let currentPet = localData ? JSON.parse(localData) : petConfig;
+        const systemColorA = localStorage.getItem('theme_color_a') || '#4285f4';
+        const systemColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        const petThemeColor = currentPet.accentColor || systemColorA;
+        
+        const root = document.documentElement;
+        root.style.setProperty('--primary', petThemeColor);
+        root.style.setProperty('--primary-dark', systemColorB);
+        root.style.setProperty('--modal-theme', petThemeColor);
+        
+        // 計算亮度
+        try {
+            const h = petThemeColor.replace('#', '');
+            const r = parseInt(h.substring(0, 2), 16);
+            const g = parseInt(h.substring(2, 4), 16);
+            const b = parseInt(h.substring(4, 6), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            root.style.setProperty('--text-on-primary', brightness > 180 ? '#333333' : '#ffffff');
+        } catch (e) {}
+    }
+    applyThemeImmediate(); // 立即呼叫，不留白
+</script>
 
 <div class="app-bar" id="appBar">
     <a href="index.html">❮ 返回</a>
@@ -198,21 +256,21 @@
         </div>
         <div class="upload-grid">
             <!-- 靜止圖 -->
-            <div class="upload-box" onclick="triggerUpload('fileIdle')">
+            <div class="upload-box" id="boxIdle" onclick="triggerUpload('fileIdle')">
                 <div class="icon">🐾</div>
                 <span>靜止外觀</span>
                 <img id="imgIdlePreview" style="display:none;">
                 <input type="file" id="fileIdle" accept="image/*" onchange="handleImageUpload(this, 'idleImg')">
             </div>
             <!-- 點擊圖 -->
-            <div class="upload-box" onclick="triggerUpload('fileActive')">
+            <div class="upload-box" id="boxActive" onclick="triggerUpload('fileActive')">
                 <div class="icon">❤️</div>
                 <span>點擊互動</span>
                 <img id="imgActivePreview" style="display:none;">
                 <input type="file" id="fileActive" accept="image/*" onchange="handleImageUpload(this, 'activeImg')">
             </div>
             <!-- 移動圖 -->
-            <div class="upload-box" onclick="triggerUpload('fileDrag')">
+            <div class="upload-box" id="boxDrag" onclick="triggerUpload('fileDrag')">
                 <div class="icon">✈️</div>
                 <span>拖曳移動</span>
                 <img id="imgDragPreview" style="display:none;">
@@ -240,46 +298,7 @@
 </div>
 
 <script>
-    // 全域基礎結構
-    let petConfig = {
-        enabled: false,
-        size: 110,
-        idleImg: 'https://via.placeholder.com/100?text=🐾',
-        activeImg: 'https://via.placeholder.com/100?text=❤️',
-        dragImg: '', 
-        effectText: '🐱喵~',
-        accentColor: '#ff4d4d'
-    };
-
-    let isInteracting = false; // 💡 防止互動測試與拖曳測試的狀態衝突
-
-    function applyTheme() {
-        const localData = localStorage.getItem('desktop_pet');
-        let currentPet = localData ? JSON.parse(localData) : petConfig;
-        
-        const systemColorA = localStorage.getItem('theme_color_a') || '#4285f4';
-        const systemColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
-        
-        const petThemeColor = currentPet.accentColor || systemColorA;
-        
-        const root = document.documentElement;
-        root.style.setProperty('--primary', petThemeColor);
-        root.style.setProperty('--primary-dark', systemColorB);
-        root.style.setProperty('--modal-theme', petThemeColor);
-        
-        const brightness = getBrightness(petThemeColor);
-        root.style.setProperty('--text-on-primary', brightness > 180 ? '#333333' : '#ffffff');
-    }
-
-    function getBrightness(hex) {
-        try {
-            const h = hex.replace('#', '');
-            const r = parseInt(h.substring(0, 2), 16);
-            const g = parseInt(h.substring(2, 4), 16);
-            const b = parseInt(h.substring(4, 6), 16);
-            return (r * 299 + g * 587 + b * 114) / 1000;
-        } catch (e) { return 0; }
-    }
+    let isInteracting = false; 
 
     function showNotify(title, msg) {
         const modal = document.getElementById('customModal');
@@ -292,54 +311,60 @@
     function closeModal() { document.getElementById('customModal').style.display = 'none'; }
 
     document.getElementById('petEffectTextInput').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            this.blur();
-        }
+        if (e.key === 'Enter') { this.blur(); }
     });
 
     function initSettings() {
         const localData = localStorage.getItem('desktop_pet');
-        if (localData) {
-            petConfig = JSON.parse(localData);
-        } else {
-            localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
-        }
+        if (localData) { petConfig = JSON.parse(localData); }
 
         document.getElementById('petToggle').checked = petConfig.enabled;
         
-        // 初始化拉桿數值
         const currentSize = petConfig.size || 110;
         document.getElementById('petSizeSlider').value = currentSize;
         document.getElementById('sizeValue').innerText = currentSize + " px";
         document.getElementById('petPreviewImg').style.width = currentSize + "px";
-
-        // 初始化文字輸入框內容
         document.getElementById('petEffectTextInput').value = petConfig.effectText || '❤️';
 
         refreshPreviews();
-        bindDragPreviewEvents(); // 💡 初始化繫結拖曳測試監聽
+        bindDragPreviewEvents(); 
+        preventLongPressMenu(); // 💡 啟用防原生選單機制
     }
 
     function refreshPreviews() {
         const defaultImg = 'https://via.placeholder.com/100?text=🐾';
-        // 只有在非互動與非按住的靜止狀態下才去複寫 src
         if (!isInteracting) {
             document.getElementById('petPreviewImg').src = petConfig.idleImg || defaultImg;
         }
 
-        setupBoxPreview('imgIdlePreview', petConfig.idleImg);
-        setupBoxPreview('imgActivePreview', petConfig.activeImg);
-        setupBoxPreview('imgDragPreview', petConfig.dragImg);
+        setupBoxPreview('imgIdlePreview', 'boxIdle', petConfig.idleImg);
+        setupBoxPreview('imgActivePreview', 'boxActive', petConfig.activeImg);
+        setupBoxPreview('imgDragPreview', 'boxDrag', petConfig.dragImg);
     }
 
-    // 💡 大預覽圖綁定按住不放的測試事件，完美模擬「拖曳時持續顯示拖曳圖，放開恢復」
+    // 💡 修正：傳入父容器 ID，當有自訂照片時，對父容器加上 .has-img 類別，隱藏文字與圖標
+    function setupBoxPreview(imgId, boxId, srcValue) {
+        const imgEl = document.getElementById(imgId);
+        const boxEl = document.getElementById(boxId);
+        
+        if(srcValue && !srcValue.includes('placeholder.com')) {
+            imgEl.src = srcValue;
+            imgEl.style.display = 'block';
+            boxEl.classList.add('has-img'); // 💡 自動隱藏文字/圖標
+        } else {
+            imgEl.style.display = 'none';
+            boxEl.classList.remove('has-img'); // 💡 恢復顯示提示文字
+        }
+    }
+
     function bindDragPreviewEvents() {
         const previewImg = document.getElementById('petPreviewImg');
         const defaultImg = 'https://via.placeholder.com/100?text=🐾';
 
         const startDragPreview = (e) => {
             if (isInteracting) return;
-            // 如果有設定拖曳圖，就顯示拖曳圖；沒有的話就用靜止圖備用
+            // 💡 防止手機長按選單觸發
+            if (e.type === 'touchstart') { e.preventDefault(); }
             previewImg.src = petConfig.dragImg || petConfig.idleImg || defaultImg;
         };
 
@@ -348,23 +373,26 @@
             previewImg.src = petConfig.idleImg || defaultImg;
         };
 
-        // 滑鼠事件
         previewImg.addEventListener('mousedown', startDragPreview);
-        window.addEventListener('mouseup', stopDragPreview); // 在 window 監聽放開，防止滑鼠滑出外面時卡住
-
-        // 行動裝置觸控事件
-        previewImg.addEventListener('touchstart', startDragPreview, { passive: true });
+        window.addEventListener('mouseup', stopDragPreview);
+        previewImg.addEventListener('touchstart', startDragPreview, { passive: false }); // 💡 設為 false 才能擋下預設反應
         window.addEventListener('touchend', stopDragPreview, { passive: true });
     }
 
-    function setupBoxPreview(imgId, srcValue) {
-        const imgEl = document.getElementById(imgId);
-        if(srcValue && !srcValue.includes('placeholder.com')) {
-            imgEl.src = srcValue;
-            imgEl.style.display = 'block';
-        } else {
-            imgEl.style.display = 'none';
-        }
+    // 💡 全面封鎖大圖與上傳格子在手機瀏覽器上的原生長按選單
+    function preventLongPressMenu() {
+        const targets = [
+            document.getElementById('petPreviewImg'),
+            document.getElementById('boxIdle'),
+            document.getElementById('boxActive'),
+            document.getElementById('boxDrag')
+        ];
+        
+        targets.forEach(el => {
+            if (!el) return;
+            // 擋下右鍵與長按彈出選單
+            el.addEventListener('contextmenu', e => e.preventDefault());
+        });
     }
 
     function triggerUpload(inputId) {
@@ -379,7 +407,6 @@
                 localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
                 localStorage.setItem('pet_sync_trigger', Date.now()); 
                 
-                // 💡 修正關鍵：上傳新圖片時，如果上傳的是靜止圖，讓大預覽圖也立即同步更新畫面
                 if (configKey === 'idleImg' && !isInteracting) {
                     document.getElementById('petPreviewImg').src = e.target.result;
                 }
@@ -425,10 +452,8 @@
         const imgEl = document.getElementById('petPreviewImg');
         const defaultActive = 'https://via.placeholder.com/100?text=❤️';
         
-        // 切換為互動點擊圖
         imgEl.src = petConfig.activeImg || petConfig.idleImg || defaultActive;
         
-        // 互動圖維持顯示的時間維持 2000ms (2秒)
         setTimeout(() => { 
             isInteracting = false;
             imgEl.src = petConfig.idleImg || 'https://via.placeholder.com/100?text=🐾'; 
@@ -440,14 +465,14 @@
 
     window.addEventListener('storage', (e) => {
         if (e.key && (e.key.includes('color') || e.key === 'desktop_pet' || e.key === 'pet_sync_trigger')) {
-            applyTheme();
+            applyThemeImmediate();
         }
     });
 
-    window.onload = () => { 
-        initSettings(); 
-        applyTheme(); 
-    };
+    // 💡 棄用 onload 改用 DOMContentLoaded，不需要等外部大圖下載完，結構一好立刻初始化，完全不 lag
+    window.addEventListener('DOMContentLoaded', () => {
+        initSettings();
+    });
 </script>
 </body>
 </html>

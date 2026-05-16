@@ -132,7 +132,8 @@
         ];
     }
 
-    let appData = getAppData();
+    // 💡 修正：預設先給空陣列，稍後統一由載入函式判斷要讀快取還是預設值
+    let appData = [];
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
@@ -254,7 +255,7 @@
         });
     }
 
-    // --- App 長按拖移排序機制（未變動） ---
+    // --- App 長按拖移排序機制 ---
     function setupAppDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
         el.addEventListener('touchstart', (e) => {
@@ -357,11 +358,23 @@
         }
     });
 
-    window.onfocus = () => { applyTheme(); renderFloatingPet(); };
+    // 💡 修正：建立獨立的排版讀取控制機制，確保隨時同步緩存的 App 位置
+    function loadAndInitLayout() {
+        applyTheme();
+        const savedLayout = localStorage.getItem('desktop_layout_ordered');
+        if (savedLayout) {
+            appData = JSON.parse(savedLayout);
+        } else {
+            appData = getAppData();
+        }
+        initDesktop();
+    }
+
+    // 💡 修正：將原本直接載入改為透過機制載入
+    window.onfocus = () => { loadAndInitLayout(); };
     window.onload = () => { 
-        applyTheme(); 
+        loadAndInitLayout(); 
         updateTime(); 
-        initDesktop(); 
         setInterval(updateTime, 1000); 
     };
 </script>

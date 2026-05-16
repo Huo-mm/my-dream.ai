@@ -199,7 +199,6 @@
         document.documentElement.style.setProperty('--primary', primaryColor);
         document.documentElement.style.setProperty('--modal-theme', modalColor);
 
-        // 刷新這頁所有圓形小選色圈的顏色
         ['sysColorA', 'sysColorB', 'colorModal', 'bgColorA', 'bgColorB'].forEach(id => {
             const input = document.getElementById(id);
             const wrapper = document.getElementById('pw-' + id);
@@ -259,6 +258,7 @@
 
             localStorage.setItem('theme_modal_color', mainColor);
             localStorage.setItem('bg_color_a', mainColor);
+            localStorage.setItem('bg_style', 'gradient'); // 同步時切回漸層
             localStorage.setItem('pet_sync_trigger', Date.now());
 
             document.getElementById('colorModal').value = mainColor;
@@ -276,7 +276,6 @@
         });
     }
 
-    // 💡 點選恢復漸層背景時，把 bg_style 設回 gradient，並移除 active_wallpaper
     function clearWallpaper() {
         localStorage.removeItem('active_wallpaper');
         localStorage.setItem('bg_style', 'gradient');
@@ -285,6 +284,13 @@
 
     window.onload = () => {
         initAppList();
+
+        // 💡 核心修正：自動同步偵測邏輯
+        // 如果 localStorage 有設定桌布圖片，但狀態卻沒同步更新成 'wallpaper'，在此進行自動修正
+        const hasWallpaper = localStorage.getItem('active_wallpaper');
+        if (hasWallpaper) {
+            localStorage.setItem('bg_style', 'wallpaper');
+        }
 
         const globalMainColor = localStorage.getItem('theme_color_a') || '#007aff';
 

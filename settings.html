@@ -75,7 +75,7 @@
     <div class="card-title">🌐 桌面圖示主題 (System)</div>
     <div style="display: flex; justify-content: space-around; align-items: center; background: #f9f9f9; padding: 20px; border-radius: 18px; margin-bottom: 15px;">
         <div style="text-align:center">
-            <div class="picker-wrapper" id="pw-sysColorA"><input type="color" id="sysColorA" oninput="saveLive('theme_color_a', this.value)"></div>
+            <div class="picker-wrapper" id="pw-sysColorA"><input type="color" id="sysColorA" oninput="handleSystemColorAInput(this.value)"></div>
             <div style="font-size:11px; color:#888; margin-top:8px;">圖示主色</div>
         </div>
         <div style="font-size:24px; color:#ddd;">➔</div>
@@ -86,8 +86,6 @@
     </div>
     <button class="btn btn-primary" id="syncBtn" onclick="confirmSync()">一鍵同步全系統為圖示主色</button>
 </div>
-
-<!-- 💡 移除原本獨立的桌寵卡片，直接合併至下方 APP 選色中 -->
 
 <div class="card">
     <div class="card-title">📱 APP 選色</div>
@@ -128,7 +126,6 @@
 </div>
 
 <script>
-    // 💡 將桌寵資料直接塞入 apps 陣列，並加上 isPet 標記做特殊格式處理
     const apps = [
         { id: 'AI', name: 'MINE', icon: '💬', key: 'app_ai_color_a', def: '#4285f4' },
         { id: 'Clock', name: '時鐘', icon: '⏰', key: 'app_clock_color_a', def: '#ff9500' },
@@ -156,7 +153,13 @@
         `).join('');
     }
 
-    // 💡 統一分流處理一般 App 與桌寵 App 的即時色彩更動
+    // 💡 當圖示主色發生變動時，重新刷新讓所有「沒有獨立顏色」的 APP 圖示跟著同步
+    function handleSystemColorAInput(value) {
+        localStorage.setItem('theme_color_a', value);
+        updatePickersAndIcons();
+        refreshUI();
+    }
+
     function handleAppColorInput(id, value) {
         const app = apps.find(a => a.id === id);
         if (app.isPet) {
@@ -166,6 +169,32 @@
         }
     }
 
+    // 💡 提取出獨立邏輯：專門用來計算、重新指派選色器與圖示背景的顯示
+    function updatePickersAndIcons() {
+        const globalMainColor = localStorage.getItem('theme_color_a') || '#007aff';
+
+        apps.forEach(app => {
+            const input = document.getElementById('color' + app.id);
+            const icon = document.getElementById('icon' + app.id);
+            
+            if (input && icon) {
+                let displayColor = '';
+                if (app.isPet) {
+                    const petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {};
+                    displayColor = petConfig.accentColor || globalMainColor;
+                } else {
+                    displayColor = localStorage.getItem(app.key) || globalMainColor;
+                }
+                
+                input.value = displayColor;
+                icon.style.background = displayColor;
+                
+                const wrapper = document.getElementById('pw-color' + app.id);
+                if (wrapper) wrapper.style.backgroundColor = displayColor;
+            }
+        });
+    }
+
     function refreshUI() {
         const modalColor = localStorage.getItem('theme_modal_color') || '#007aff';
         const primaryColor = localStorage.getItem('theme_color_a') || '#007aff';
@@ -173,21 +202,16 @@
         document.documentElement.style.setProperty('--primary', primaryColor);
         document.documentElement.style.setProperty('--modal-theme', modalColor);
 
-        // 更新背景預覽
+        // 💡 修正背景色邏輯：這裡僅用來展示這組背景色漸層，回歸「純粹預覽」用途
         const bgA = localStorage.getItem('bg_color_a') || primaryColor;
         const bgB = localStorage.getItem('bg_color_b') || '#1a2a6c';
         document.body.style.background = `linear-gradient(180deg, ${bgA}, ${bgB})`;
 
-        const allInputs = document.querySelectorAll('input[type="color"]');
-        allInputs.forEach(input => {
-            const wrapper = document.getElementById('pw-' + input.id);
-            if(wrapper) wrapper.style.backgroundColor = input.value;
-        });
-
-        // App 與桌寵圖示背景同步更新
-        apps.forEach(app => {
-            const el = document.getElementById('color' + app.id);
-            if(el) document.getElementById('icon' + app.id).style.background = el.value;
+        // 刷新頂部三個系統組件圓圈的顏色
+        ['sysColorA', 'sysColorB', 'colorModal', 'bgColorA', 'bgColorB'].forEach(id => {
+            const input = document.getElementById(id);
+            const wrapper = document.getElementById('pw-' + id);
+            if(input && wrapper) wrapper.style.backgroundColor = input.value;
         });
 
         if(document.getElementById('syncBtn')) document.getElementById('syncBtn').style.background = primaryColor;
@@ -197,14 +221,14 @@
         let petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {};
         petConfig.accentColor = value;
         localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
-        
-        // 💡 觸發主頁面監聽事件，讓桌寵設定即時連動
         localStorage.setItem('pet_sync_trigger', Date.now()); 
+        updatePickersAndIcons();
         refreshUI();
     }
 
     function saveLive(key, value) {
         localStorage.setItem(key, value);
+        updatePickersAndIcons();
         refreshUI();
     }
 
@@ -231,22 +255,24 @@
         showModal("一鍵同步", "確定要將所有 APP、背景色與桌寵色統一為主色調嗎？", () => {
             const mainColor = document.getElementById('sysColorA').value;
 
-            // 同步一般 App 與桌寵色
             apps.forEach(app => {
-                const input = document.getElementById('color' + app.id);
                 if (app.isPet) {
-                    savePetColor(mainColor);
-                    if(input) input.value = mainColor;
+                    let petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {};
+                    petConfig.accentColor = mainColor;
+                    localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
                 } else {
                     localStorage.setItem(app.key, mainColor);
-                    if(input) input.value = mainColor;
                 }
             });
 
             localStorage.setItem('theme_modal_color', mainColor);
             localStorage.setItem('bg_color_a', mainColor);
+            localStorage.setItem('pet_sync_trigger', Date.now());
+
             document.getElementById('colorModal').value = mainColor;
             document.getElementById('bgColorA').value = mainColor;
+            
+            updatePickersAndIcons();
             refreshUI();
         });
     }
@@ -267,7 +293,7 @@
     window.onload = () => {
         initAppList();
 
-        const globalMainColor = localStorage.getItem('theme_color_a') || '#4285f4';
+        const globalMainColor = localStorage.getItem('theme_color_a') || '#007aff';
 
         document.getElementById('sysColorA').value = globalMainColor;
         document.getElementById('sysColorB').value = localStorage.getItem('theme_color_b') || '#1a2a6c';
@@ -275,20 +301,8 @@
         document.getElementById('bgColorA').value = localStorage.getItem('bg_color_a') || globalMainColor;
         document.getElementById('bgColorB').value = localStorage.getItem('bg_color_b') || '#1a2a6c';
 
-        // 初始化所有 APP（含桌寵）的選色器預設數值
-        apps.forEach(app => {
-            const input = document.getElementById('color' + app.id);
-            if(input) {
-                if (app.isPet) {
-                    const petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {};
-                    input.value = petConfig.accentColor || app.def;
-                } else {
-                    const saved = localStorage.getItem(app.key);
-                    input.value = saved || globalMainColor || app.def;
-                }
-            }
-        });
-
+        // 💡 載入時初次渲染顏色
+        updatePickersAndIcons();
         refreshUI();
     };
 </script>

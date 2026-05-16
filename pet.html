@@ -19,7 +19,6 @@
             background-color: var(--color-a);
             background-image: linear-gradient(180deg, var(--color-a), var(--color-b));
             background-size: cover; background-position: center;
-            /* 💡 核心修正：設定頁面也全面禁用長按選單與文字反白 */
             -webkit-touch-callout: none !important; 
             -webkit-user-select: none !important; 
             user-select: none !important;
@@ -59,17 +58,14 @@
         input:checked + .slider { background-color: #4cd964; }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        /* 💡 核心修正：自訂外觀文字移出框格後的外部標籤樣式 */
         .input-label { display: block; font-size: 14px; margin-bottom: 6px; color: rgba(255, 255, 255, 0.85); font-weight: 500; }
 
-        /* 輸入框樣式 */
+        /* 💡 修正：改造為適合上傳檔案的 input 樣式 */
         .input-box {
             width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3);
             background: rgba(0, 0, 0, 0.2); color: white; font-size: 14px; box-sizing: border-box; margin-bottom: 15px;
-            -webkit-user-select: text !important; user-select: text !important; /* 確保輸入框可以正常點擊輸入文字 */
         }
         .input-box:last-child { margin-bottom: 0; }
-        .input-box::placeholder { color: rgba(255,255,255,0.4); }
 
         /* 滑桿樣式 */
         .range-slider { width: 65%; -webkit-appearance: none; background: rgba(255,255,255,0.3); height: 6px; border-radius: 5px; outline: none; }
@@ -89,7 +85,6 @@
             width: 120px; height: 120px; display: flex; justify-content: center; align-items: center;
             border: 2px dashed rgba(255,255,255,0.3); border-radius: 20px; margin-top: 10px; position: relative;
         }
-        /* 💡 核心修正：預覽圖片也阻斷長按選單 */
         .preview-pet-box img { 
             max-width: 100%; max-height: 100%; object-fit: contain; 
             -webkit-touch-callout: none !important;
@@ -129,21 +124,23 @@
         </div>
     </div>
 
-    <!-- 💡 核心修正：將引導文字移到框格外面，框格內改用乾淨的 placeholder -->
+    <!-- 自訂外觀動作 (改為直接上傳圖檔模式) -->
     <div class="setting-card">
         <div style="font-size: 16px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">🎨 自訂外觀與動作</div>
         
-        <label class="input-label">靜態 / 閒置圖網址：</label>
-        <input type="text" id="img-idle" class="input-box" placeholder="請輸入圖片網址 (預設為預留圖)">
+        <!-- 💡 修正：全改為 type="file" 以便直接選取相簿圖檔 -->
+        <label class="input-label">靜態 / 閒置圖檔：</label>
+        <input type="file" id="file-idle" class="input-box" accept="image/*">
         
-        <label class="input-label">點擊互動圖網址：</label>
-        <input type="text" id="img-active" class="input-box" placeholder="請輸入點擊時顯示的圖片網址">
+        <label class="input-label">點擊互動圖檔：</label>
+        <input type="file" id="file-active" class="input-box" accept="image/*">
         
-        <label class="input-label">按住拖曳圖網址：</label>
-        <input type="text" id="img-drag" class="input-box" placeholder="請輸入拖曳時顯示的圖片網址">
+        <label class="input-label">按住拖曳圖檔：</label>
+        <input type="file" id="file-drag" class="input-box" accept="image/*">
         
         <label class="input-label">點擊彈出文字 / 特效：</label>
-        <input type="text" id="effect-text" class="input-box" placeholder="例如：❤️ 或 喵~ (預設為 ❤️)">
+        <!-- 特效依然維持文字輸入 -->
+        <input type="text" id="effect-text" class="input-box" placeholder="例如：❤️ 或 喵~ (預設為 ❤️)" style="-webkit-user-select: text !important; user-select: text !important;">
     </div>
 
     <!-- 儲存 -->
@@ -173,13 +170,14 @@
         }
     }
 
-    // 載入當前桌寵配置
-    let currentConfig = {};
+    // 暫存目前的圖片 Base64 資料，用於比對或沒重新選取時保留舊檔
+    let petDataUrls = { idle: '', active: '', drag: '' };
     const defaultImg = 'https://via.placeholder.com/100?text=PET';
 
+    // 載入當前桌寵配置
     function loadPetConfig() {
         applyTheme();
-        currentConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {
+        const currentConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {
             enabled: false,
             size: 110,
             idleImg: '',
@@ -192,43 +190,66 @@
         document.getElementById('pet-toggle').checked = currentConfig.enabled;
         document.getElementById('pet-size').value = currentConfig.size || 110;
         document.getElementById('size-val').innerText = (currentConfig.size || 110) + 'px';
-        document.getElementById('img-idle').value = currentConfig.idleImg || '';
-        document.getElementById('img-active').value = currentConfig.activeImg || '';
-        document.getElementById('img-drag').value = currentConfig.dragImg || '';
         document.getElementById('effect-text').value = currentConfig.effectText || '❤️';
+
+        // 將既有的圖片紀錄存入暫存變數
+        petDataUrls.idle = currentConfig.idleImg || '';
+        petDataUrls.active = currentConfig.activeImg || '';
+        petDataUrls.drag = currentConfig.dragImg || '';
 
         updatePreview();
     }
 
-    // 更新預覽畫面
-    function updatePreview() {
-        const idleUrl = document.getElementById('img-idle').value;
-        const pImg = document.getElementById('preview-img');
-        pImg.src = idleUrl || defaultImg;
+    // 將 File 欄位轉換為 Base64 格式
+    function getBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
     }
 
-    // 綁定滑桿與輸入即時連動
+    // 更新預覽畫面
+    function updatePreview() {
+        const pImg = document.getElementById('preview-img');
+        pImg.src = petDataUrls.idle || defaultImg;
+    }
+
+    // 💡 修正：當使用者在手機相簿選完照片後，即時觸更新預覽
+    document.getElementById('file-idle').addEventListener('change', async (e) => {
+        if(e.target.files.length > 0) {
+            petDataUrls.idle = await getBase64(e.target.files[0]);
+            updatePreview();
+        }
+    });
+    document.getElementById('file-active').addEventListener('change', async (e) => {
+        if(e.target.files.length > 0) {
+            petDataUrls.active = await getBase64(e.target.files[0]);
+        }
+    });
+    document.getElementById('file-drag').addEventListener('change', async (e) => {
+        if(e.target.files.length > 0) {
+            petDataUrls.drag = await getBase64(e.target.files[0]);
+        }
+    });
+
     document.getElementById('pet-size').addEventListener('input', (e) => {
         document.getElementById('size-val').innerText = e.target.value + 'px';
     });
-    document.getElementById('img-idle').addEventListener('input', updatePreview);
 
-    // 預覽區的點擊測試
+    // 預覽區點擊動效測試
     const pBox = document.getElementById('preview-box');
     const pImg = document.getElementById('preview-img');
 
-    // 💡 修正：全面阻斷預覽區域的長按與右鍵選單
     pBox.addEventListener('contextmenu', (e) => e.preventDefault());
     pImg.addEventListener('contextmenu', (e) => e.preventDefault());
 
     function triggerPreviewActive() {
-        const activeUrl = document.getElementById('img-active').value;
-        const idleUrl = document.getElementById('img-idle').value;
         const effectTxt = document.getElementById('effect-text').value || '❤️';
 
-        if (activeUrl) pImg.src = activeUrl;
+        if (petDataUrls.active) pImg.src = petDataUrls.active;
         
-        // 彈出特效
         const span = document.createElement('span');
         span.className = 'preview-effect';
         span.innerText = effectTxt;
@@ -237,12 +258,12 @@
         pBox.appendChild(span);
         
         setTimeout(() => span.remove(), 800);
-        setTimeout(() => { pImg.src = idleUrl || defaultImg; }, 2000);
+        setTimeout(() => { pImg.src = petDataUrls.idle || defaultImg; }, 2000);
     }
 
     pBox.onclick = triggerPreviewActive;
     pBox.ontouchstart = (e) => {
-        e.preventDefault(); // 阻斷觸控長按選單
+        e.preventDefault(); 
         triggerPreviewActive();
     };
 
@@ -251,17 +272,16 @@
         const config = {
             enabled: document.getElementById('pet-toggle').checked,
             size: parseInt(document.getElementById('pet-size').value),
-            idleImg: document.getElementById('img-idle').value,
-            activeImg: document.getElementById('img-active').value,
-            dragImg: document.getElementById('img-drag').value,
+            idleImg: petDataUrls.idle,
+            activeImg: petDataUrls.active,
+            dragImg: petDataUrls.drag,
             effectText: document.getElementById('effect-text').value || '❤️'
         };
 
         localStorage.setItem('desktop_pet', JSON.stringify(config));
-        // 發送跨頁面同步通知
         localStorage.setItem('pet_sync_trigger', Date.now());
         
-        alert('設定儲存成功！已即時同步至主畫面。');
+        alert('設定儲存成功！已直接套用您上傳的圖檔。');
     }
 
     window.onload = loadPetConfig;

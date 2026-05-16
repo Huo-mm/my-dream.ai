@@ -12,7 +12,7 @@
             --color-b: #1a2a6c; 
         }
         
-        html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: auto; background: #1a2a6c; }
+        html, body { margin: 0; padding: 0; height: 100%; width: 100%; background: #1a2a6c; }
         
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
@@ -20,7 +20,11 @@
             background-image: linear-gradient(180deg, var(--color-a), var(--color-b));
             background-size: cover; background-position: center;
             -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            /* 💡 修正：移除 position: fixed，改用 overscroll-behavior 來優化網頁下拉彈性，同時允許下拉重整 */
+            position: relative; 
+            overscroll-behavior-y: contain; 
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         #status-bar {
@@ -28,9 +32,10 @@
             display: flex; justify-content: space-between; font-size: 14px;
             background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             z-index: 1000; flex-shrink: 0;
+            position: sticky; top: 0; /* 讓狀態列維持置頂 */
         }
 
-        /* 原始 4x6 網格排版，完全不變動 */
+        /* 4x6 網格排版 */
         #home-screen {
             flex: 1; display: grid; 
             grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); 
@@ -39,7 +44,7 @@
         }
 
         .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: none; }
+        .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: pan-y; }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
         
         .icon-box { 
@@ -50,14 +55,14 @@
             background: linear-gradient(135deg, var(--color-a), var(--color-b)) !important; 
         }
 
-        /* ⭐ 桌寵全新自定義：完全獨立浮空、無磨砂背景，大小 110px 大約等於兩格 Grid */
+        /* 桌寵外觀：完全獨立浮空、無磨砂背景 */
         .pet-widget {
             position: fixed;
             width: 110px; height: 110px;
             display: flex; justify-content: center; align-items: center;
             touch-action: none; z-index: 999;
             cursor: grab;
-            display: none; /* 預設由開關控制顯示 */
+            display: none;
         }
         .pet-widget img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
         
@@ -129,7 +134,7 @@
             { id: 'archive', name: '記憶倉庫', icon: '🏛️', url: 'archive.html' },
             { id: 'mail', name: '信箱', icon: '✉️', url: 'mail.html' },
             { id: 'anniversary', name: '紀念日', icon: '📅', url: 'anniversary.html' },
-            { id: 'pet_settings', name: '桌寵設定', icon: '🐾', url: 'pet.html' } // 指向獨立的桌寵 app
+            { id: 'pet_settings', name: '桌寵設定', icon: '🐾', url: 'pet.html' }
         ];
     }
 
@@ -137,7 +142,6 @@
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
 
-    // --- 初始化 4x6 桌面（完全維持原樣） ---
     function initDesktop() {
         homeScreen.innerHTML = '';
         appData.forEach((app, index) => {
@@ -152,7 +156,6 @@
             slot.className = 'grid-slot'; slot.dataset.index = i;
             homeScreen.appendChild(slot);
         }
-        // 初始化桌寵狀態與位置
         renderFloatingPet();
     }
 
@@ -181,7 +184,6 @@
         img.src = petConfig.idleImg || defaultImg;
         petEl.appendChild(img);
 
-        // 讀取先前儲存的位置，如果沒有，預設在最右下角（視窗寬度-130, 高度-230）
         let savedX = localStorage.getItem('pet_pos_x');
         let savedY = localStorage.getItem('pet_pos_y');
         if (savedX === null || savedY === null) {
@@ -191,7 +193,6 @@
         petEl.style.left = savedX + 'px';
         petEl.style.top = savedY + 'px';
 
-        // 點擊互動
         petEl.addEventListener('mousedown', (e) => {
             img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
             spawnPetEffect(e.clientX, e.clientY, petConfig.effectText);
@@ -210,7 +211,6 @@
         setTimeout(() => span.remove(), 800);
     }
 
-    // 桌寵專用自由拖曳（不干涉 App 排序）
     function setupPetFloatingDragging(petEl, config) {
         let isMoving = false;
         let pX = 0, pY = 0;
@@ -226,12 +226,12 @@
 
         petEl.addEventListener('touchmove', (e) => {
             if (!isMoving) return;
-            e.preventDefault(); // 阻擋畫面捲動
+            // 💡 修正：只有在拖曳「桌寵本身」時才阻擋下拉重整
+            if (e.cancelable) e.preventDefault(); 
             const touch = e.touches[0];
             let targetX = touch.clientX - pX;
             let targetY = touch.clientY - pY;
 
-            // 邊界限制（防止拖出螢幕外）
             targetX = Math.max(0, Math.min(window.innerWidth - 110, targetX));
             targetY = Math.max(0, Math.min(window.innerHeight - 110, targetY));
 
@@ -245,13 +245,12 @@
             const img = petEl.querySelector('img');
             if (img) img.src = config.idleImg;
 
-            // 永久儲存自由擺放的位置
             localStorage.setItem('pet_pos_x', parseInt(petEl.style.left));
             localStorage.setItem('pet_pos_y', parseInt(petEl.style.top));
         });
     }
 
-    // --- 原有 App 拖移與排列（完全不變動） ---
+    // --- App 拖移與排列（加入阻擋機制修正） ---
     function setupAppDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
 
@@ -278,6 +277,10 @@
 
         el.addEventListener('touchmove', (e) => {
             if (!isDragging) return clearTimeout(dragTimeout);
+            
+            // 💡 修正：一旦進入「長按App編輯模式」，就阻擋網頁下拉重整
+            if (e.cancelable) e.preventDefault(); 
+            
             const touch = e.touches[0];
             if(window._activeClone) {
                 window._activeClone.style.left = (touch.clientX - offsetX) + 'px';

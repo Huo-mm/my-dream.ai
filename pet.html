@@ -73,7 +73,7 @@
         }
         .range-value { font-size: 14px; color: #555; font-weight: 500; min-width: 45px; text-align: right; }
 
-        /* 💡 新增：自訂文字輸入框樣式 */
+        /* 自訂文字輸入框樣式 */
         .text-input-container { width: 100%; margin-top: 5px; }
         .effect-text-input {
             width: 100%; padding: 12px 16px; border: 1.5px solid #e0e0e0; border-radius: 12px;
@@ -106,7 +106,8 @@
         .preview-window {
             height: 200px; display: flex; align-items: center; justify-content: center; width: 100%;
         }
-        .preview-window img { height: auto; object-fit: contain; transition: width 0.1s ease; }
+        .preview-window img { height: auto; object-fit: contain; transition: width 0.1s ease; cursor: grab; user-select: none; -webkit-user-drag: none; }
+        .preview-window img:active { cursor: grabbing; }
 
         /* 按鈕：同步漸層 */
         .btn-action { 
@@ -178,7 +179,7 @@
         </div>
     </div>
 
-    <!-- 💡 新增：互動特效文字設定卡片 -->
+    <!-- 互動特效文字設定卡片 -->
     <div class="setting-card">
         <div class="setting-info" style="width:100%">
             <h4>自訂點擊互動文字</h4>
@@ -222,7 +223,7 @@
 
     <!-- 預覽視窗 -->
     <div class="pet-preview-box">
-        <div style="font-size: 13px; color: #999;">即時預覽效果</div>
+        <div style="font-size: 13px; color: #999;">即時預覽效果（按住圖片可測試拖曳外觀）</div>
         <div class="preview-window">
             <img id="petPreviewImg" src="https://via.placeholder.com/100?text=🐾" alt="Pet">
         </div>
@@ -249,6 +250,8 @@
         effectText: '🐱喵~',
         accentColor: '#ff4d4d'
     };
+
+    let isInteracting = false; // 💡 防止互動測試與拖曳測試的狀態衝突
 
     function applyTheme() {
         const localData = localStorage.getItem('desktop_pet');
@@ -290,7 +293,7 @@
 
     document.getElementById('petEffectTextInput').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
-            this.blur(); // 💡 當按下手機虛擬鍵盤的「完成/前往」或鍵盤 Enter 時，強制卸載焦點以觸發變更
+            this.blur();
         }
     });
 
@@ -310,19 +313,48 @@
         document.getElementById('sizeValue').innerText = currentSize + " px";
         document.getElementById('petPreviewImg').style.width = currentSize + "px";
 
-        // 💡 初始化文字輸入框內容
+        // 初始化文字輸入框內容
         document.getElementById('petEffectTextInput').value = petConfig.effectText || '❤️';
 
         refreshPreviews();
+        bindDragPreviewEvents(); // 💡 初始化繫結拖曳測試監聽
     }
 
     function refreshPreviews() {
         const defaultImg = 'https://via.placeholder.com/100?text=🐾';
-        document.getElementById('petPreviewImg').src = petConfig.idleImg || defaultImg;
+        // 只有在非互動與非按住的靜止狀態下才去複寫 src
+        if (!isInteracting) {
+            document.getElementById('petPreviewImg').src = petConfig.idleImg || defaultImg;
+        }
 
         setupBoxPreview('imgIdlePreview', petConfig.idleImg);
         setupBoxPreview('imgActivePreview', petConfig.activeImg);
         setupBoxPreview('imgDragPreview', petConfig.dragImg);
+    }
+
+    // 💡 新增：在大預覽圖綁定按住不放的測試事件，完美模擬「拖曳時持續顯示拖曳圖，放開恢復」
+    function bindDragPreviewEvents() {
+        const previewImg = document.getElementById('petPreviewImg');
+        const defaultImg = 'https://via.placeholder.com/100?text=🐾';
+
+        const startDragPreview = (e) => {
+            if (isInteracting) return;
+            // 如果有設定拖曳圖，就顯示拖曳圖；沒有的話就用靜止圖備用
+            previewImg.src = petConfig.dragImg || petConfig.idleImg || defaultImg;
+        };
+
+        const stopDragPreview = () => {
+            if (isInteracting) return;
+            previewImg.src = petConfig.idleImg || defaultImg;
+        };
+
+        // 滑鼠事件
+        previewImg.addEventListener('mousedown', startDragPreview);
+        window.addEventListener('mouseup', stopDragPreview); // 在 window 監聽放開，防止滑鼠滑出外面時卡住
+
+        // 行動裝置觸控事件
+        previewImg.addEventListener('touchstart', startDragPreview, { passive: true });
+        window.addEventListener('touchend', stopDragPreview, { passive: true });
     }
 
     function setupBoxPreview(imgId, srcValue) {
@@ -361,12 +393,11 @@
         localStorage.setItem('pet_sync_trigger', Date.now()); 
     }
 
-    // 💡 新增：同步文字輸入更新到本地快取的函式
     function updateEffectText(val) {
         const trimmed = val.trim();
-        petConfig.effectText = trimmed || '❤️'; // 如果留白，預設放愛心
+        petConfig.effectText = trimmed || '❤️';
         localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
-        localStorage.setItem('pet_sync_trigger', Date.now()); // 即時通知主頁同步更新
+        localStorage.setItem('pet_sync_trigger', Date.now());
     }
 
     function togglePet(checkbox) {
@@ -382,14 +413,21 @@
     }
 
     function interactWithPet() {
+        if (isInteracting) return;
+        isInteracting = true;
+
         const imgEl = document.getElementById('petPreviewImg');
         const defaultActive = 'https://via.placeholder.com/100?text=❤️';
-        imgEl.src = petConfig.activeImg || petConfig.idleImg || defaultActive;
-        setTimeout(() => { 
-            imgEl.src = petConfig.idleImg || 'https://via.placeholder.com/100?text=🐾'; 
-        }, 1000);
         
-        // 💡 修正：讓頁面下方的互動測試也能讀到你剛剛輸入的最新文字
+        // 切換為互動點擊圖
+        imgEl.src = petConfig.activeImg || petConfig.idleImg || defaultActive;
+        
+        // 💡 修正：將互動圖維持顯示的時間從 1000ms 延長至 2000ms (2秒)
+        setTimeout(() => { 
+            isInteracting = false;
+            imgEl.src = petConfig.idleImg || 'https://via.placeholder.com/100?text=🐾'; 
+        }, 2000);
+        
         const currentText = document.getElementById('petEffectTextInput').value || '❤️';
         showNotify("互動成功", "精靈開心地對你發出 " + currentText);
     }

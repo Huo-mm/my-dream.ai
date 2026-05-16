@@ -40,7 +40,7 @@
             grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, 1fr); 
             gap: 10px; padding: 10px 20px; box-sizing: border-box;
             grid-auto-flow: dense; 
-            z-index: 5; /* 確保 App 網格有基礎層級 */
+            z-index: 5;
         }
 
         .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
@@ -55,22 +55,22 @@
             background: linear-gradient(135deg, var(--color-a), var(--color-b)) !important; 
         }
 
-        /* 💡 修正：桌寵最外層框架。z-index 調高，但核心是設定 pointer-events: none 讓點擊直接穿透！ */
+        /* 桌寵外框：點擊穿透 */
         .pet-widget {
             position: fixed;
             display: flex; justify-content: center; align-items: center;
             touch-action: none; 
-            z-index: 9999; /* 浮在最上層 */
+            z-index: 9999; 
             cursor: grab;
             display: none;
-            pointer-events: none !important; /* 👈 透明區域完全不攔截滑鼠與觸控 */
+            pointer-events: none !important; 
         }
         
-        /* 💡 修正：只有真正點到桌寵圖片本身時，才恢復有點擊權限 */
+        /* 桌寵圖片本體：接收點擊 */
         .pet-widget img { 
             width: 100%; height: 100%; 
             object-fit: contain; 
-            pointer-events: auto !important; /* 👈 點擊圖片本體能正常動態互動 */
+            pointer-events: auto !important; 
         }
 
         .pet-effect {
@@ -114,7 +114,6 @@
     <div onclick="location.reload()" style="cursor:pointer; font-size:26px;">🏠</div>
 </div>
 
-<!-- 💡 修正：將桌寵實體徹底移到網頁結構的最尾端（靠近 </body>），確保層級邏輯最完美 -->
 <div id="desktop_pet_widget" class="pet-widget"></div>
 
 <script>
@@ -149,8 +148,15 @@
     let appData = [];
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
+    let isDesktopInitialized = false; // 💡 新增：防止重複渲染的鎖
 
     function initDesktop() {
+        // 💡 修正：如果已經初始化過，且畫面上有 App，就不再重複清空重建，避免干擾觸控流
+        if (isDesktopInitialized && homeScreen.children.length > 0) {
+            renderFloatingPet();
+            return;
+        }
+
         homeScreen.innerHTML = '';
         appData.forEach((app, index) => {
             const slot = document.createElement('div');
@@ -163,6 +169,7 @@
             slot.className = 'grid-slot'; slot.dataset.index = i;
             homeScreen.appendChild(slot);
         }
+        isDesktopInitialized = true;
         renderFloatingPet();
     }
 
@@ -174,7 +181,6 @@
         return a;
     }
 
-    // --- 獨立浮動桌寵核心邏輯 ---
     function renderFloatingPet() {
         const petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || { enabled: false, size: 110 };
         const petEl = document.getElementById('desktop_pet_widget');
@@ -188,12 +194,15 @@
         petEl.style.display = 'flex';
         petEl.style.width = petSize + 'px';
         petEl.style.height = petSize + 'px';
-        petEl.innerHTML = '';
-
-        const img = document.createElement('img');
+        
+        // 💡 優化：避免每次重回頁面都重刷桌寵內層 HTML
+        if (!petEl.querySelector('img')) {
+            const img = document.createElement('img');
+            petEl.appendChild(img);
+        }
+        const img = petEl.querySelector('img');
         const defaultImg = 'https://via.placeholder.com/100?text=PET';
         img.src = petConfig.idleImg || defaultImg;
-        petEl.appendChild(img);
 
         let savedX = localStorage.getItem('pet_pos_x');
         let savedY = localStorage.getItem('pet_pos_y');
@@ -204,21 +213,19 @@
         petEl.style.left = savedX + 'px';
         petEl.style.top = savedY + 'px';
 
-        // 點擊互動 -> 切換為點擊圖（因為點擊被綁在 img 本身，這次絕不干擾背景 App 觸控）
-        img.addEventListener('mousedown', (e) => {
+        // 綁定點擊特效
+        img.onmousedown = (e) => {
             img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
             spawnPetEffect(e.clientX, e.clientY, petConfig.effectText);
             setTimeout(() => { img.src = petConfig.idleImg || defaultImg; }, 1000);
-        });
+        };
 
-        // 手機觸控點擊互動支援
-        img.addEventListener('touchstart', (e) => {
-            // 如果不是在大幅度拖曳，單純點擊就發出特效
+        img.ontouchstart = (e) => {
             img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
             const touch = e.touches[0];
             spawnPetEffect(touch.clientX, touch.clientY, petConfig.effectText);
             setTimeout(() => { img.src = petConfig.idleImg || defaultImg; }, 1000);
-        }, {passive: true});
+        };
 
         setupPetFloatingDragging(petEl, petConfig);
     }
@@ -238,50 +245,48 @@
         let pX = 0, pY = 0;
         const petSize = config.size || 110;
 
-        petEl.addEventListener('touchstart', (e) => {
+        petEl.ontouchstart = (e) => {
             isMoving = true;
             const touch = e.touches[0];
             pX = touch.clientX - petEl.offsetLeft;
             pY = touch.clientY - petEl.offsetTop;
-
             const img = petEl.querySelector('img');
             if (img) img.src = config.dragImg || config.activeImg || config.idleImg;
-        }, {passive: true});
+        };
 
-        petEl.addEventListener('touchmove', (e) => {
+        petEl.ontouchmove = (e) => {
             if (!isMoving) return;
             if (e.cancelable) e.preventDefault(); 
             const touch = e.touches[0];
             let targetX = touch.clientX - pX;
             let targetY = touch.clientY - pY;
-
             targetX = Math.max(0, Math.min(window.innerWidth - petSize, targetX));
             targetY = Math.max(0, Math.min(window.innerHeight - petSize, targetY));
-
             petEl.style.left = targetX + 'px';
             petEl.style.top = targetY + 'px';
-        }, {passive: false});
+        };
 
-        petEl.addEventListener('touchend', () => {
+        petEl.ontouchend = () => {
             if (!isMoving) return;
             isMoving = false;
-
             const img = petEl.querySelector('img');
             if (img) img.src = config.idleImg || 'https://via.placeholder.com/100?text=PET';
-
             localStorage.setItem('pet_pos_x', parseInt(petEl.style.left));
             localStorage.setItem('pet_pos_y', parseInt(petEl.style.top));
-        });
+        };
     }
 
-    // --- App 長按拖移排序機制 ---
+    // --- App 長按拖移排序機制（全面改為明確清理計時器） ---
     function setupAppDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
+        
         el.addEventListener('touchstart', (e) => {
+            clearTimeout(dragTimeout); // 💡 確保一進來就乾淨
             const touch = e.touches[0];
             const rect = el.getBoundingClientRect();
             offsetX = touch.clientX - rect.left;
             offsetY = touch.clientY - rect.top;
+            
             dragTimeout = setTimeout(() => {
                 isDragging = true;
                 const clone = el.cloneNode(true);
@@ -294,11 +299,14 @@
                 window._activeClone = clone;
                 el.classList.add('source-hidden');
                 lastTargetIdx = appData.findIndex(a => a.id === el.dataset.id);
-            }, 500);
+            }, 600); // 稍微拉長長按判定，避免一般點擊誤觸
         }, {passive: true});
 
         el.addEventListener('touchmove', (e) => {
-            if (!isDragging) return clearTimeout(dragTimeout);
+            if (!isDragging) {
+                clearTimeout(dragTimeout);
+                return;
+            }
             if (e.cancelable) e.preventDefault(); 
             const touch = e.touches[0];
             if(window._activeClone) {
@@ -320,13 +328,18 @@
         }, {passive: false});
 
         el.addEventListener('touchend', () => {
-            clearTimeout(dragTimeout);
+            clearTimeout(dragTimeout); // 💡 點擊放開時，絕對要把長按計時器殺掉
             if (!isDragging) return;
             isDragging = false;
             if(window._activeClone) window._activeClone.remove();
             window._activeClone = null;
             localStorage.setItem('desktop_layout_ordered', JSON.stringify(appData));
+            isDesktopInitialized = false; // 允許重排後的重繪
             initDesktop(); 
+        });
+
+        el.addEventListener('touchcancel', () => {
+            clearTimeout(dragTimeout);
         });
     }
 
@@ -388,7 +401,7 @@
         initDesktop();
     }
 
-    window.onfocus = () => { loadAndInitLayout(); };
+    // 💡 修正：移除常在返回時造成異常重刷的 window.onfocus 重新渲染
     window.onload = () => { 
         loadAndInitLayout(); 
         updateTime(); 

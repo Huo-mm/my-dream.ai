@@ -148,10 +148,9 @@
     let appData = [];
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
-    let isDesktopInitialized = false; // 💡 新增：防止重複渲染的鎖
+    let isDesktopInitialized = false; // 防止重複渲染的鎖
 
     function initDesktop() {
-        // 💡 修正：如果已經初始化過，且畫面上有 App，就不再重複清空重建，避免干擾觸控流
         if (isDesktopInitialized && homeScreen.children.length > 0) {
             renderFloatingPet();
             return;
@@ -195,7 +194,6 @@
         petEl.style.width = petSize + 'px';
         petEl.style.height = petSize + 'px';
         
-        // 💡 優化：避免每次重回頁面都重刷桌寵內層 HTML
         if (!petEl.querySelector('img')) {
             const img = document.createElement('img');
             petEl.appendChild(img);
@@ -217,14 +215,16 @@
         img.onmousedown = (e) => {
             img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
             spawnPetEffect(e.clientX, e.clientY, petConfig.effectText);
-            setTimeout(() => { img.src = petConfig.idleImg || defaultImg; }, 1000);
+            // 💡 修正：將互動圖維持的時間拉長至 2000 毫秒（2秒）
+            setTimeout(() => { if(!petEl.dataset.moving) img.src = petConfig.idleImg || defaultImg; }, 2000);
         };
 
         img.ontouchstart = (e) => {
             img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
             const touch = e.touches[0];
             spawnPetEffect(touch.clientX, touch.clientY, petConfig.effectText);
-            setTimeout(() => { img.src = petConfig.idleImg || defaultImg; }, 1000);
+            // 💡 修正：將互動圖維持的時間拉長至 2000 毫秒（2秒）
+            setTimeout(() => { if(!petEl.dataset.moving) img.src = petConfig.idleImg || defaultImg; }, 2000);
         };
 
         setupPetFloatingDragging(petEl, petConfig);
@@ -244,14 +244,18 @@
         let isMoving = false;
         let pX = 0, pY = 0;
         const petSize = config.size || 110;
+        const img = petEl.querySelector('img');
+        const defaultImg = 'https://via.placeholder.com/100?text=PET';
 
         petEl.ontouchstart = (e) => {
             isMoving = true;
+            petEl.dataset.moving = "true"; // 用於標記，防止點擊的 setTimeout 覆蓋圖片
             const touch = e.touches[0];
             pX = touch.clientX - petEl.offsetLeft;
             pY = touch.clientY - petEl.offsetTop;
-            const img = petEl.querySelector('img');
-            if (img) img.src = config.dragImg || config.activeImg || config.idleImg;
+            
+            // 觸控開始時，如果有設定拖曳圖就優先用拖曳圖
+            if (img) img.src = config.dragImg || config.idleImg || defaultImg;
         };
 
         petEl.ontouchmove = (e) => {
@@ -264,24 +268,30 @@
             targetY = Math.max(0, Math.min(window.innerHeight - petSize, targetY));
             petEl.style.left = targetX + 'px';
             petEl.style.top = targetY + 'px';
+
+            // 💡 核心修正：在手指持續移動過程中，強制鎖定圖片必須是拖曳圖，不允許任何閃爍
+            if (img && config.dragImg && img.src !== config.dragImg) {
+                img.src = config.dragImg;
+            }
         };
 
         petEl.ontouchend = () => {
             if (!isMoving) return;
             isMoving = false;
-            const img = petEl.querySelector('img');
-            if (img) img.src = config.idleImg || 'https://via.placeholder.com/100?text=PET';
+            delete petEl.dataset.moving; // 移除移動標記
+            
+            if (img) img.src = config.idleImg || defaultImg;
             localStorage.setItem('pet_pos_x', parseInt(petEl.style.left));
             localStorage.setItem('pet_pos_y', parseInt(petEl.style.top));
         };
     }
 
-    // --- App 長按拖移排序機制（全面改為明確清理計時器） ---
+    // --- App 長按拖移排序機制 ---
     function setupAppDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
         
         el.addEventListener('touchstart', (e) => {
-            clearTimeout(dragTimeout); // 💡 確保一進來就乾淨
+            clearTimeout(dragTimeout); 
             const touch = e.touches[0];
             const rect = el.getBoundingClientRect();
             offsetX = touch.clientX - rect.left;
@@ -299,7 +309,7 @@
                 window._activeClone = clone;
                 el.classList.add('source-hidden');
                 lastTargetIdx = appData.findIndex(a => a.id === el.dataset.id);
-            }, 600); // 稍微拉長長按判定，避免一般點擊誤觸
+            }, 600); 
         }, {passive: true});
 
         el.addEventListener('touchmove', (e) => {
@@ -328,13 +338,13 @@
         }, {passive: false});
 
         el.addEventListener('touchend', () => {
-            clearTimeout(dragTimeout); // 💡 點擊放開時，絕對要把長按計時器殺掉
+            clearTimeout(dragTimeout); 
             if (!isDragging) return;
             isDragging = false;
             if(window._activeClone) window._activeClone.remove();
             window._activeClone = null;
             localStorage.setItem('desktop_layout_ordered', JSON.stringify(appData));
-            isDesktopInitialized = false; // 允許重排後的重繪
+            isDesktopInitialized = false; 
             initDesktop(); 
         });
 
@@ -401,7 +411,6 @@
         initDesktop();
     }
 
-    // 💡 修正：移除常在返回時造成異常重刷的 window.onfocus 重新渲染
     window.onload = () => { 
         loadAndInitLayout(); 
         updateTime(); 

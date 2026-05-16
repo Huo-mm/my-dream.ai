@@ -12,13 +12,14 @@
             --color-b: #1a2a6c; 
         }
 
-        html, body { margin: 0; padding: 0; height: 100%; width: 100%; background: #1a2a6c; }
+        html, body { margin: 0; padding: 0; height: 100%; width: 100%; }
 
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
-            background-color: var(--color-a);
-            background-image: linear-gradient(180deg, var(--color-a), var(--color-b));
-            background-size: cover; background-position: center;
+            /* 💡 修正：移除會擋住圖片的寫死 background-color */
+            background-size: cover; 
+            background-position: center;
+            background-repeat: no-repeat;
             background-attachment: fixed; /* 讓背景保持固定不隨網頁滾動 */
             -webkit-touch-callout: none !important; 
             -webkit-user-select: none !important; 
@@ -27,7 +28,7 @@
             overscroll-behavior-y: contain; 
             overflow-x: hidden;
             overflow-y: auto;
-            transition: background 0.3s ease; /* 換色或清除桌布時有絲滑的過渡感 */
+            transition: background 0.3s ease, background-image 0.3s ease; /* 換色或清除桌布時有絲滑的過渡感 */
         }
 
         #status-bar {
@@ -133,31 +134,36 @@
 <div id="desktop_pet_widget" class="pet-widget"></div>
 
 <script>
-    // 💡 修正後的 applyTheme 函式，具備自動格式防呆
+    // 💡 終極防呆版 applyTheme 函式
     function applyTheme() {
         const sysColorA = localStorage.getItem('theme_color_a') || '#4285f4';
         const sysColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
 
-        // 讀取自定義頁面的「桌面背景色」卡片設定，若沒設定過，預設自動跟隨系統圖示主色與漸層
         const bgColorA = localStorage.getItem('bg_color_a') || sysColorA;
         const bgColorB = localStorage.getItem('bg_color_b') || sysColorB;
 
         let wallpaper = localStorage.getItem('active_wallpaper');
         const bgStyle = localStorage.getItem('bg_style') || 'gradient';
 
-        // 系統變數主要控制圖示顏色 (這部分維持不變)
+        // 系統變數控制圖示顏色
         document.documentElement.style.setProperty('--color-a', sysColorA);
         document.documentElement.style.setProperty('--color-b', sysColorB);
 
-        // 桌布分流邏輯
-        if (bgStyle === 'wallpaper' && wallpaper) {
-            // 💡 智慧防呆：檢查撈出來的桌布值是不是已經帶有 "url(" 字樣
+        // 💡 核心修正：只要 active_wallpaper 存在且有值，且目前不是手動按了「恢復漸層背景」
+        // 就無視所有狀態標籤，強制把圖片渲染出來，擊碎 CSS 遮罩！
+        if (wallpaper && wallpaper.trim() !== "" && bgStyle !== 'gradient') {
             if (!wallpaper.startsWith('url(')) {
                 wallpaper = `url(${wallpaper})`;
             }
+            document.body.style.background = "none"; // 清空背景顏色干擾
             document.body.style.backgroundImage = wallpaper;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundRepeat = 'no-repeat';
+            document.body.style.backgroundAttachment = 'fixed';
         } else {
-            // 沒有桌布圖片（或是手動恢復漸層）時：完美連結自定義頁面的「桌面背景 A/B」！
+            // 沒有桌布圖片或是手動要求漸層，才渲染 A/B 漸層
+            document.body.style.background = ""; // 恢復預設
             document.body.style.backgroundImage = `linear-gradient(180deg, ${bgColorA}, ${bgColorB})`;
         }
     }
@@ -317,7 +323,6 @@
         };
     }
 
-    // --- App 長按拖移排序機制 ---
     function setupAppDragging(el) {
         let isDragging = false, lastTargetIdx = -1;
 

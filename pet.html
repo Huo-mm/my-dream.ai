@@ -39,13 +39,14 @@
         .setting-card {
             background: white; padding: 20px; border-radius: 16px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            display: flex; align-items: center; justify-content: space-between;
+            display: flex; flex-direction: column; gap: 12px;
         }
+        .row-space { display: flex; align-items: center; justify-content: space-between; width: 100%; }
         .setting-info h4 { margin: 0 0 5px 0; color: #333; font-size: 16px; }
         .setting-info p { margin: 0; color: #888; font-size: 13px; }
 
         /* iOS 風格美化開關 */
-        .switch { position: relative; display: inline-block; width: 51px; height: 31px; }
+        .switch { position: relative; display: inline-block; width: 51px; height: 31px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
             position: absolute; cursor: pointer; inset: 0; background-color: #ccc;
@@ -59,13 +60,42 @@
         input:checked + .slider { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
         input:checked + .slider:before { transform: translateX(20px); }
 
+        /* 大小調節拉桿樣式 */
+        .range-container { width: 100%; display: flex; align-items: center; gap: 12px; margin-top: 5px; }
+        .range-slider {
+            flex: 1; -webkit-appearance: none; appearance: none; height: 6px; 
+            background: #e0e0e0; border-radius: 5px; outline: none;
+        }
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 22px; height: 22px; 
+            border-radius: 50%; background: white; cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 1px solid #ddd;
+        }
+        .range-value { font-size: 14px; color: #555; font-weight: 500; min-width: 45px; text-align: right; }
+
+        /* 相簿風格相片上傳區塊 */
+        .upload-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 5px; }
+        .upload-box {
+            background: #f8f9fa; border: 2px dashed #ccced0; border-radius: 12px;
+            aspect-ratio: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 6px; cursor: pointer; position: relative; overflow: hidden;
+        }
+        .upload-box:active { background: #f0f1f2; }
+        .upload-box img { width: 100%; height: 100%; object-fit: contain; position: absolute; top:0; left:0; }
+        .upload-box span { font-size: 11px; color: #666; font-weight: 500; z-index: 1; text-align: center; padding: 0 4px; }
+        .upload-box .icon { font-size: 20px; z-index: 1; }
+        .upload-box input[type="file"] { display: none; }
+
         /* 預覽卡片 */
         .pet-preview-box {
-            background: white; border-radius: 16px; padding: 30px; text-align: center;
+            background: white; border-radius: 16px; padding: 25px; text-align: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
         }
-        .pet-preview-box img { max-width: 100px; height: auto; object-fit: contain; }
+        .preview-window {
+            height: 200px; display: flex; align-items: center; justify-content: center; width: 100%;
+        }
+        .preview-window img { height: auto; object-fit: contain; transition: width 0.1s ease; }
 
         /* 按鈕：同步漸層 */
         .btn-action { 
@@ -111,20 +141,69 @@
 </div>
 
 <div class="content">
+    <!-- 開關卡片 -->
     <div class="setting-card">
-        <div class="setting-info">
-            <h4>顯示桌面精靈</h4>
-            <p>開啟後，精靈會以 2×2 大小浮現於桌面</p>
+        <div class="row-space">
+            <div class="setting-info">
+                <h4>顯示桌面精靈</h4>
+                <p>開啟後，精靈會以自訂大小浮現於桌面</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="petToggle" onchange="togglePet(this)">
+                <span class="slider"></span>
+            </label>
         </div>
-        <label class="switch">
-            <input type="checkbox" id="petToggle" onchange="togglePet(this)">
-            <span class="slider"></span>
-        </label>
     </div>
 
+    <!-- 💡 新增：尺寸拉桿卡片 -->
+    <div class="setting-card">
+        <div class="setting-info" style="width:100%">
+            <h4>精靈顯示大小</h4>
+            <p>自由調整精靈在桌面的尺寸大小</p>
+            <div class="range-container">
+                <input type="range" id="petSizeSlider" class="range-slider" min="60" max="200" value="110" oninput="updatePetSize(this.value)">
+                <span class="range-value" id="sizeValue">110 px</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💡 新增：相簿風格三態外觀上傳區塊 -->
+    <div class="setting-card">
+        <div class="setting-info" style="width: 100%; margin-bottom: 5px;">
+            <h4>自訂精靈動作外觀</h4>
+            <p>點擊格子可自相簿挑選 PNG/JPG 替換</p>
+        </div>
+        <div class="upload-grid">
+            <!-- 靜止圖 -->
+            <div class="upload-box" onclick="triggerUpload('fileIdle')">
+                <div class="icon">🐾</div>
+                <span>靜止外觀</span>
+                <img id="imgIdlePreview" style="display:none;">
+                <input type="file" id="fileIdle" accept="image/*" onchange="handleImageUpload(this, 'idleImg')">
+            </div>
+            <!-- 點擊圖 -->
+            <div class="upload-box" onclick="triggerUpload('fileActive')">
+                <div class="icon">❤️</div>
+                <span>點擊互動</span>
+                <img id="imgActivePreview" style="display:none;">
+                <input type="file" id="fileActive" accept="image/*" onchange="handleImageUpload(this, 'activeImg')">
+            </div>
+            <!-- 移動圖 -->
+            <div class="upload-box" onclick="triggerUpload('fileDrag')">
+                <div class="icon">✈️</div>
+                <span>拖曳移動</span>
+                <img id="imgDragPreview" style="display:none;">
+                <input type="file" id="fileDrag" accept="image/*" onchange="handleImageUpload(this, 'dragImg')">
+            </div>
+        </div>
+    </div>
+
+    <!-- 預覽視窗 -->
     <div class="pet-preview-box">
-        <div style="font-size: 14px; color: #999;">目前精靈外觀</div>
-        <img id="petPreviewImg" src="https://via.placeholder.com/100?text=🐾" alt="Pet">
+        <div style="font-size: 13px; color: #999;">即時預覽效果</div>
+        <div class="preview-window">
+            <img id="petPreviewImg" src="https://via.placeholder.com/100?text=🐾" alt="Pet">
+        </div>
         <button class="btn-action" onclick="interactWithPet()">互動測試</button>
     </div>
 </div>
@@ -138,24 +217,23 @@
 </div>
 
 <script>
-    // 預設一開始為關閉狀態 (enabled: false)
+    // 預設與初始化結構擴充 size 與 dragImg
     let petConfig = JSON.parse(localStorage.getItem('desktop_pet')) || {
         enabled: false,
+        size: 110,
         idleImg: 'https://via.placeholder.com/100?text=🐾',
         activeImg: 'https://via.placeholder.com/100?text=❤️',
+        dragImg: '', 
         effectText: '🐱喵~'
     };
 
-    // ✨ 真正連結 Settings 的主題色源（theme_color_a / b）
     function applyTheme() {
         const systemColorA = localStorage.getItem('theme_color_a') || '#4285f4';
         const systemColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
-
         const root = document.documentElement;
         root.style.setProperty('--primary', systemColorA);
         root.style.setProperty('--primary-dark', systemColorB);
         root.style.setProperty('--modal-theme', systemColorA);
-
         const brightness = getBrightness(systemColorA);
         root.style.setProperty('--text-on-primary', brightness > 180 ? '#333333' : '#ffffff');
     }
@@ -182,18 +260,71 @@
 
     function initSettings() {
         document.getElementById('petToggle').checked = petConfig.enabled;
-        document.getElementById('petPreviewImg').src = petConfig.idleImg;
+        
+        // 初始化拉桿數值
+        const currentSize = petConfig.size || 110;
+        document.getElementById('petSizeSlider').value = currentSize;
+        document.getElementById('sizeValue').innerText = currentSize + " px";
+        document.getElementById('petPreviewImg').style.width = currentSize + "px";
+
+        // 更新大預覽圖與三個格子預覽小圖
+        refreshPreviews();
+    }
+
+    function refreshPreviews() {
+        const defaultImg = 'https://via.placeholder.com/100?text=🐾';
+        document.getElementById('petPreviewImg').src = petConfig.idleImg || defaultImg;
+
+        setupBoxPreview('imgIdlePreview', petConfig.idleImg);
+        setupBoxPreview('imgActivePreview', petConfig.activeImg);
+        setupBoxPreview('imgDragPreview', petConfig.dragImg);
+    }
+
+    function setupBoxPreview(imgId, srcValue) {
+        const imgEl = document.getElementById(imgId);
+        if(srcValue && !srcValue.includes('placeholder.com')) {
+            imgEl.src = srcValue;
+            imgEl.style.display = 'block';
+        } else {
+            imgEl.style.display = 'none';
+        }
+    }
+
+    function triggerUpload(inputId) {
+        document.getElementById(inputId).click();
+    }
+
+    // 處理相簿相片上傳，轉為 base64 存入 localStorage
+    function handleImageUpload(input, configKey) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                petConfig[configKey] = e.target.result; // base64 碼
+                localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+                localStorage.setItem('pet_sync_trigger', Date.now()); // 即時通知首頁
+                refreshPreviews();
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // 拉桿調整大小即時反應
+    function updatePetSize(val) {
+        document.getElementById('sizeValue').innerText = val + " px";
+        document.getElementById('petPreviewImg').style.width = val + "px";
+        
+        petConfig.size = parseInt(val);
+        localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
+        localStorage.setItem('pet_sync_trigger', Date.now()); // 即時通知首頁尺寸改變
     }
 
     function togglePet(checkbox) {
         petConfig.enabled = checkbox.checked;
         localStorage.setItem('desktop_pet', JSON.stringify(petConfig));
-        
-        // 觸發 index 即時重繪開關
         localStorage.setItem('pet_sync_trigger', Date.now());
 
         if(petConfig.enabled) {
-            showNotify("精靈召喚", "精靈已出現在桌面的最右下角，你可以對它自由拖曳移動！");
+            showNotify("精靈召喚", "精靈已浮現在桌面，你可以對它自由拖曳移動與縮放！");
         } else {
             showNotify("精靈收回", "精靈已回到中心休息。");
         }
@@ -201,9 +332,12 @@
 
     function interactWithPet() {
         const imgEl = document.getElementById('petPreviewImg');
-        imgEl.src = petConfig.activeImg;
-        setTimeout(() => { imgEl.src = petConfig.idleImg; }, 1000);
-        showNotify("互動成功", "精靈開心地對你發出 " + petConfig.effectText);
+        const defaultActive = 'https://via.placeholder.com/100?text=❤️';
+        imgEl.src = petConfig.activeImg || petConfig.idleImg || defaultActive;
+        setTimeout(() => { 
+            imgEl.src = petConfig.idleImg || 'https://via.placeholder.com/100?text=🐾'; 
+        }, 1000);
+        showNotify("互動成功", "精靈開心地對你發出 " + (petConfig.effectText || '❤️'));
     }
 
     window.addEventListener('storage', (e) => {

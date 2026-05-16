@@ -19,7 +19,10 @@
             background-color: var(--color-a);
             background-image: linear-gradient(180deg, var(--color-a), var(--color-b));
             background-size: cover; background-position: center;
-            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+            /* 💡 核心修正：全域禁用長按彈出選單與文字選取 */
+            -webkit-touch-callout: none !important; 
+            -webkit-user-select: none !important; 
+            user-select: none !important;
             position: relative; 
             overscroll-behavior-y: contain; 
             overflow-x: hidden;
@@ -44,7 +47,15 @@
         }
 
         .grid-slot { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        .app-icon { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: white; width: 100%; touch-action: pan-y; }
+        
+        /* 💡 核心修正：針對 App 圖示連結禁用長按選單與反白 */
+        .app-icon { 
+            display: flex; flex-direction: column; align-items: center; 
+            text-decoration: none; color: white; width: 100%; touch-action: pan-y; 
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            user-select: none !important;
+        }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
 
         .icon-box { 
@@ -67,10 +78,14 @@
         }
         
         /* 桌寵圖片本體：接收點擊 */
+        /* 💡 核心修正：針對桌寵圖片禁用長按儲存圖片選單 */
         .pet-widget img { 
             width: 100%; height: 100%; 
             object-fit: contain; 
             pointer-events: auto !important; 
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            user-select: none !important;
         }
 
         .pet-effect {
@@ -148,7 +163,7 @@
     let appData = [];
     const homeScreen = document.getElementById('home-screen');
     let dragTimeout, offsetX = 0, offsetY = 0, isReordering = false;
-    let isDesktopInitialized = false; // 防止重複渲染的鎖
+    let isDesktopInitialized = false; 
 
     function initDesktop() {
         if (isDesktopInitialized && homeScreen.children.length > 0) {
@@ -211,11 +226,9 @@
         petEl.style.left = savedX + 'px';
         petEl.style.top = savedY + 'px';
 
-        // 綁定點擊特效
         img.onmousedown = (e) => {
             img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
             spawnPetEffect(e.clientX, e.clientY, petConfig.effectText);
-            // 💡 修正：將互動圖維持的時間拉長至 2000 毫秒（2秒）
             setTimeout(() => { if(!petEl.dataset.moving) img.src = petConfig.idleImg || defaultImg; }, 2000);
         };
 
@@ -223,7 +236,6 @@
             img.src = petConfig.activeImg || petConfig.idleImg || defaultImg;
             const touch = e.touches[0];
             spawnPetEffect(touch.clientX, touch.clientY, petConfig.effectText);
-            // 💡 修正：將互動圖維持的時間拉長至 2000 毫秒（2秒）
             setTimeout(() => { if(!petEl.dataset.moving) img.src = petConfig.idleImg || defaultImg; }, 2000);
         };
 
@@ -249,12 +261,11 @@
 
         petEl.ontouchstart = (e) => {
             isMoving = true;
-            petEl.dataset.moving = "true"; // 用於標記，防止點擊的 setTimeout 覆蓋圖片
+            petEl.dataset.moving = "true"; 
             const touch = e.touches[0];
             pX = touch.clientX - petEl.offsetLeft;
             pY = touch.clientY - petEl.offsetTop;
             
-            // 觸控開始時，如果有設定拖曳圖就優先用拖曳圖
             if (img) img.src = config.dragImg || config.idleImg || defaultImg;
         };
 
@@ -269,7 +280,6 @@
             petEl.style.left = targetX + 'px';
             petEl.style.top = targetY + 'px';
 
-            // 💡 核心修正：在手指持續移動過程中，強制鎖定圖片必須是拖曳圖，不允許任何閃爍
             if (img && config.dragImg && img.src !== config.dragImg) {
                 img.src = config.dragImg;
             }
@@ -278,7 +288,7 @@
         petEl.ontouchend = () => {
             if (!isMoving) return;
             isMoving = false;
-            delete petEl.dataset.moving; // 移除移動標記
+            delete petEl.dataset.moving; 
             
             if (img) img.src = config.idleImg || defaultImg;
             localStorage.setItem('pet_pos_x', parseInt(petEl.style.left));

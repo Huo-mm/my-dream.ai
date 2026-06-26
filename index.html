@@ -19,7 +19,6 @@
 
         body { 
             color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column;
-            /* 💡 修正：移除會擋住圖片的寫死 background-color */
             background-size: cover; 
             background-position: center;
             background-repeat: no-repeat;
@@ -137,7 +136,6 @@
 <div id="desktop_pet_widget" class="pet-widget"></div>
 
 <script>
-    // 💡 終極防呆版 applyTheme 函式
     function applyTheme() {
         const sysColorA = localStorage.getItem('theme_color_a') || '#4285f4';
         const sysColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
@@ -148,25 +146,21 @@
         let wallpaper = localStorage.getItem('active_wallpaper');
         const bgStyle = localStorage.getItem('bg_style') || 'gradient';
 
-        // 系統變數控制圖示顏色
         document.documentElement.style.setProperty('--color-a', sysColorA);
         document.documentElement.style.setProperty('--color-b', sysColorB);
 
-        // 💡 核心修正：只要 active_wallpaper 存在且有值，且目前不是手動按了「恢復漸層背景」
-        // 就無視所有狀態標籤，強制把圖片渲染出來，擊碎 CSS 遮罩！
         if (wallpaper && wallpaper.trim() !== "" && bgStyle !== 'gradient') {
             if (!wallpaper.startsWith('url(')) {
                 wallpaper = `url(${wallpaper})`;
             }
-            document.body.style.background = "none"; // 清空背景顏色干擾
+            document.body.style.background = "none"; 
             document.body.style.backgroundImage = wallpaper;
             document.body.style.backgroundSize = 'cover';
             document.body.style.backgroundPosition = 'center';
             document.body.style.backgroundRepeat = 'no-repeat';
             document.body.style.backgroundAttachment = 'fixed';
         } else {
-            // 沒有桌布圖片或是手動要求漸層，才渲染 A/B 漸層
-            document.body.style.background = ""; // 恢復預設
+            document.body.style.background = ""; 
             document.body.style.backgroundImage = `linear-gradient(180deg, ${bgColorA}, ${bgColorB})`;
         }
     }
@@ -175,6 +169,7 @@
         return [
             { id: 'chat', name: 'MINE', icon: '💬', url: 'chat.html' },
             { id: 'clock', name: '時間', icon: '⏰', url: 'clock.html' },
+            { id: 'game', name: '對對碰', icon: '🎮', url: 'game.html' }, /* ✨ 這裡加入了新遊戲 App！ */
             { id: 'weather', name: '天氣', icon: '☁️', url: 'weather.html' },
             { id: 'gallery', name: '相簿', icon: '🖼️', url: 'gallery.html' },
             { id: 'notes', name: '備忘錄', icon: '📝', url: 'notes.html' },
@@ -447,10 +442,21 @@
     function loadAndInitLayout() {
         applyTheme();
         const savedLayout = localStorage.getItem('desktop_layout_ordered');
+        const defaultApps = getAppData();
+        
         if (savedLayout) {
-            appData = JSON.parse(savedLayout);
+            let parsedLayout = JSON.parse(savedLayout);
+            
+            // 💡 智慧同步邏輯：如果主畫面有新增 App (例如 game)，但 localStorage 還是舊清單時
+            // 會自動把沒出現的新 App 自動加到後面，防止使用者看不到新功能！
+            defaultApps.forEach(defaultApp => {
+                if (!parsedLayout.some(app => app.id === defaultApp.id)) {
+                    parsedLayout.push(defaultApp);
+                }
+            });
+            appData = parsedLayout;
         } else {
-            appData = getAppData();
+            appData = defaultApps;
         }
         initDesktop();
     }

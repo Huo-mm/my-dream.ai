@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <title>對對碰遊戲</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐾</text></svg>">
+    
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+            --color-a: #4285f4;
+            --color-b: #1a2a6c;
+        }
+        html, body { margin: 0; padding: 0; height: 100%; width: 100%; }
+        body {
+            color: white; font-family: -apple-system, sans-serif;
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 頂部狀態與返回列 */
+        #header {
+            padding: calc(var(--safe-top) + 10px) 20px 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+        }
+        .back-btn { text-decoration: none; color: white; font-size: 18px; font-weight: bold; }
+        
+        #game-info { font-size: 16px; font-weight: bold; }
+
+        /* 核心：固定範圍的遊戲區域 */
+        #game-container {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; box-sizing: border-box;
+        }
+
+        /* 💡 4x4 固定的卡牌網格 */
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(4, 75px);
+            grid-template-rows: repeat(4, 75px);
+            gap: 12px;
+            perspective: 1000px; /* 為了 3D 翻牌效果 */
+        }
+
+        /* 💡 嚴格固定每一張卡牌的大小範圍，絕不跑位 */
+        .card {
+            width: 75px; height: 75px; position: relative;
+            transform-style: preserve-3d; transition: transform 0.4s ease; cursor: pointer;
+        }
+        .card.flipped { transform: rotateY(180deg); }
+
+        /* 卡牌正反面共有樣式 */
+        .card-face {
+            position: absolute; width: 100%; height: 100%;
+            border-radius: 12px; backface-visibility: hidden;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+
+        /* 卡牌背面（朝上、未翻開時）-> 自動跟隨你的系統漸層色！ */
+        .card-back {
+            background: linear-gradient(135deg, var(--color-a), var(--color-b));
+            border: 2px white solid; font-size: 24px; color: rgba(255,255,255,0.7);
+        }
+
+        /* 卡牌正面（翻開後、顯示內容）*/
+        .card-front {
+            background: #fff; color: #222;
+            transform: rotateY(180deg); font-size: 32px;
+            overflow: hidden; /* 防止內容溢出 */
+        }
+
+        /* 💡 如果之後用圖片，確保圖片大小死死固定在 75x75 內且不變形 */
+        .card-front img {
+            width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
+        }
+
+        /* 底部設定區（可以讓使用者自己輸入想玩的 Emoji） */
+        #settings-bar {
+            background: rgba(0,0,0,0.4); padding: 15px 20px calc(var(--safe-bottom) + 15px) 20px;
+            display: flex; flex-direction: column; gap: 8px; align-items: center;
+        }
+        .input-row { display: flex; gap: 8px; width: 100%; max-width: 300px; }
+        #emoji-input {
+            flex: 1; padding: 8px; border-radius: 8px; border: none; font-size: 14px; text-align: center;
+        }
+        #restart-btn {
+            padding: 8px 16px; border: none; background: #4caf50; color: white;
+            border-radius: 8px; font-weight: bold; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <a href="index.html" class="back-btn">ㄑ 離開遊戲</a>
+    <div id="game-info">步數: <span id="moves">0</span> | 配對: <span id="matches">0</span>/8</div>
+</div>
+
+<div id="game-container">
+    <div id="grid"></div>
+</div>
+
+<div id="settings-bar">
+    <span style="font-size: 12px; color: #ccc;">💡 自訂遊戲圖案（請輸入 8 個不同的 Emoji 或字元）</span>
+    <div class="input-row">
+        <input type="text" id="emoji-input" value="🐾🐱🦊🦁🐯🐼🐰🦄">
+        <button id="restart-btn" onclick="initGame()">重新開始</button>
+    </div>
+</div>
+
+<script>
+    // 讀取虛擬手機的系統主題背景
+    function applyTheme() {
+        const sysColorA = localStorage.getItem('theme_color_a') || '#4285f4';
+        const sysColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+        const bgColorA = localStorage.getItem('bg_color_a') || sysColorA;
+        const bgColorB = localStorage.getItem('bg_color_b') || sysColorB;
+        let wallpaper = localStorage.getItem('active_wallpaper');
+        const bgStyle = localStorage.getItem('bg_style') || 'gradient';
+
+        document.documentElement.style.setProperty('--color-a', sysColorA);
+        document.documentElement.style.setProperty('--color-b', sysColorB);
+
+        if (wallpaper && wallpaper.trim() !== "" && bgStyle !== 'gradient') {
+            if (!wallpaper.startsWith('url(')) wallpaper = `url(${wallpaper})`;
+            document.body.style.background = "none";
+            document.body.style.backgroundImage = wallpaper;
+        } else {
+            document.body.style.background = "";
+            document.body.style.backgroundImage = `linear-gradient(180deg, ${bgColorA}, ${bgColorB})`;
+        }
+    }
+
+    let cardsData = [];
+    let flippedCards = [];
+    let moves = 0;
+    let matches = 0;
+    let lockBoard = false;
+
+    function initGame() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        flippedCards = [];
+        moves = 0;
+        matches = 0;
+        lockBoard = false;
+        document.getElementById('moves').innerText = moves;
+        document.getElementById('matches').innerText = matches;
+
+        // 💡 取得使用者輸入的自訂內容
+        const inputVal = document.getElementById('emoji-input').value.trim();
+        // 將字串轉成陣列（支援 Emoji）
+        let baseItems = Array.from(inputVal).slice(0, 8);
+        
+        // 防呆：如果使用者亂輸入導致不夠 8 個，用預設湊滿
+        while(baseItems.length < 8) {
+            baseItems.push('❓');
+        }
+
+        // 對對碰需要兩兩一組
+        cardsData = [...baseItems, ...baseItems];
+        // 洗牌算法 (Shuffle)
+        cardsData.sort(() => Math.random() - 0.5);
+
+        // 渲染卡牌 HTML
+        cardsData.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.dataset.index = index;
+            card.dataset.value = item;
+
+            // 💡 判斷使用者輸入的是不是網址（圖片路徑），如果是就渲染成 <img>，否則渲染成 Emoji 文字
+            let frontContent = item;
+            if (item.startsWith('http') || item.startsWith('./') || item.startsWith('data:image')) {
+                frontContent = `<img src="${item}">`;
+            }
+
+            card.innerHTML = `
+                <div class="card-face card-back">❓</div>
+                <div class="card-face card-front">${frontContent}</div>
+            `;
+            
+            card.addEventListener('click', flipCard);
+            grid.appendChild(card);
+        });
+    }
+
+    function flipCard() {
+        if (lockBoard) return;
+        if (this === flippedCards[0]) return; // 不能重複點同一張
+        if (this.classList.contains('flipped')) return; // 已經配對成功的不能再點
+
+        this.classList.add('flipped');
+        flippedCards.push(this);
+
+        if (flippedCards.length === 2) {
+            moves++;
+            document.getElementById('moves').innerText = moves;
+            checkMatch();
+        }
+    }
+
+    function checkMatch() {
+        let isMatch = flippedCards[0].dataset.value === flippedCards[1].dataset.value;
+        if (isMatch) {
+            matches++;
+            document.getElementById('matches').innerText = matches;
+            flippedCards = [];
+            if (matches === 8) {
+                setTimeout(() => { alert(`🎉 恭喜破關！你總共花了 ${moves} 步。`); }, 500);
+            }
+        } else {
+            lockBoard = true;
+            // 沒對中，1秒後翻回去
+            setTimeout(() => {
+                flippedCards[0].classList.remove('flipped');
+                flippedCards[1].classList.remove('flipped');
+                flippedCards = [];
+                lockBoard = false;
+            }, 1000);
+        }
+    }
+
+    window.onload = () => {
+        applyTheme();
+        initGame();
+    };
+</script>
+</body>
+</html>

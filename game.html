@@ -13,7 +13,7 @@
             --color-a: #4285f4;
             --color-b: #1a2a6c;
             --modal-theme: #007aff; 
-            --btn-theme: #4caf50; /* ✨ 新增：重新開始按鈕的主題色變數 */
+            --btn-theme: #4caf50; 
         }
         html, body { margin: 0; padding: 0; height: 100%; width: 100%; }
         body {
@@ -33,7 +33,7 @@
 
         #game-info { font-size: 16px; font-weight: bold; }
 
-        /* 核心：固定範圍的遊戲區域 */
+        /* 固定範圍的遊戲區域 */
         #game-container {
             flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 20px; box-sizing: border-box;
@@ -48,7 +48,7 @@
             perspective: 1000px; 
         }
 
-        /* 嚴格固定每一張卡牌的大小範圍，絕不跑位 */
+        /* 嚴格固定每一張卡牌的大小範圍 */
         .card {
             width: 75px; height: 75px; position: relative;
             transform-style: preserve-3d; transition: transform 0.4s ease; cursor: pointer;
@@ -64,10 +64,10 @@
             box-sizing: border-box;
         }
 
-        /* 卡牌背面（朝上、未翻開時） */
+        /* ✨ 修正：卡牌背面（朝上、未翻開時）-> 完美注入連動與獨立選色漸層！ */
         .card-back {
-            background: linear-gradient(135deg, var(--color-a), var(--color-b));
-            border: 2px white solid; font-size: 24px; color: rgba(255,255,255,0.7);
+            background: linear-gradient(135deg, var(--color-a), var(--color-b)) !important;
+            border: 2px white solid; font-size: 24px; color: rgba(255,255,255,0.8);
         }
 
         /* 卡牌正面（翻開後、顯示內容）*/
@@ -92,7 +92,7 @@
             flex: 1; padding: 8px; border-radius: 8px; border: none; font-size: 14px; text-align: center;
         }
         #restart-btn {
-            padding: 8px 16px; border: none; background: var(--btn-theme); color: white; /* ✨ 連動遊戲獨立選色 */
+            padding: 8px 16px; border: none; background: var(--btn-theme); color: white; 
             border-radius: 8px; font-weight: bold; cursor: pointer; transition: opacity 0.2s;
         }
         #restart-btn:active { opacity: 0.8; }
@@ -146,26 +146,25 @@
 
 <script>
     function applyTheme() {
+        // 1. 抓取系統全域設定
         const sysColorA = localStorage.getItem('theme_color_a') || '#4285f4';
         const sysColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
 
         const bgColorA = localStorage.getItem('bg_color_a') || sysColorA;
         const bgColorB = localStorage.getItem('bg_color_b') || sysColorB;
-        
-        // 💡 抓取自定義系統設定頁面的「通知彈窗主題色」
         const modalColor = localStorage.getItem('theme_modal_color') || sysColorA; 
         let wallpaper = localStorage.getItem('active_wallpaper');
         const bgStyle = localStorage.getItem('bg_style') || 'gradient';
 
-        // 💡 抓取自定義對對碰小遊戲的「獨立選色」
+        // 2. ✨ 連動核心：如果遊戲沒有獨立選色（app_game_color_a），就直接拿系統全系統主色（sysColorA）！
         const gameColorA = localStorage.getItem('app_game_color_a') || sysColorA;
         const gameColorB = localStorage.getItem('theme_color_b') || sysColorB; 
 
-        // 💡 將對應變數塞進 CSS 中
+        // 3. 將變數注入 CSS
         document.documentElement.style.setProperty('--color-a', gameColorA);
         document.documentElement.style.setProperty('--color-b', gameColorB);
         document.documentElement.style.setProperty('--modal-theme', modalColor); 
-        document.documentElement.style.setProperty('--btn-theme', gameColorA); // ✨ 重新開始按鈕跟隨遊戲獨立選色！
+        document.documentElement.style.setProperty('--btn-theme', gameColorA); 
 
         if (wallpaper && wallpaper.trim() !== "" && bgStyle !== 'gradient') {
             if (!wallpaper.startsWith('url(')) wallpaper = `url(${wallpaper})`;
@@ -232,9 +231,11 @@
                 frontContent = `<img src="${item}">`;
             }
 
+            // ✨【超級大修正】！原本把 frontContent 誤塞到 card-back 了。
+            // 現在 card-back 只有單純的 ❓，真正的答案 frontContent 乖乖待在 card-front 裡！
             card.innerHTML = `
                 <div class="card-face card-back">❓</div>
-                <div class="card-front">${frontContent}</div>
+                <div class="card-face card-front">${frontContent}</div>
             `;
 
             card.addEventListener('click', flipCard);
@@ -242,10 +243,8 @@
         });
     }
 
-    // ✨ 新增：點擊重新開始按鈕時的處理邏輯
     function handleRestartClick() {
-        initGame(); // 1. 先執行重置洗牌
-        // 2. 顯示精美的主題配對通知彈窗！
+        initGame(); 
         showModal("🔄 系統提示", "遊戲卡牌已重新打亂，新的回合開始囉！");
     }
 

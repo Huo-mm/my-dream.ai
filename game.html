@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <title>對對碰遊戲</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐾</text></svg>">
-    
+
     <style>
         :root {
             --safe-top: env(safe-area-inset-top);
             --safe-bottom: env(safe-area-inset-bottom);
             --color-a: #4285f4;
             --color-b: #1a2a6c;
+            --modal-theme: #007aff; 
         }
         html, body { margin: 0; padding: 0; height: 100%; width: 100%; }
         body {
@@ -28,7 +29,7 @@
             background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
         }
         .back-btn { text-decoration: none; color: white; font-size: 18px; font-weight: bold; }
-        
+
         #game-info { font-size: 16px; font-weight: bold; }
 
         /* 核心：固定範圍的遊戲區域 */
@@ -37,16 +38,16 @@
             padding: 20px; box-sizing: border-box;
         }
 
-        /* 💡 4x4 固定的卡牌網格 */
+        /* 4x4 固定的卡牌網格 */
         #grid {
             display: grid;
             grid-template-columns: repeat(4, 75px);
             grid-template-rows: repeat(4, 75px);
             gap: 12px;
-            perspective: 1000px; /* 為了 3D 翻牌效果 */
+            perspective: 1000px; 
         }
 
-        /* 💡 嚴格固定每一張卡牌的大小範圍，絕不跑位 */
+        /* 嚴格固定每一張卡牌的大小範圍，絕不跑位 */
         .card {
             width: 75px; height: 75px; position: relative;
             transform-style: preserve-3d; transition: transform 0.4s ease; cursor: pointer;
@@ -62,7 +63,7 @@
             box-sizing: border-box;
         }
 
-        /* 卡牌背面（朝上、未翻開時）-> 自動跟隨你的系統漸層色！ */
+        /* 卡牌背面（朝上、未翻開時） */
         .card-back {
             background: linear-gradient(135deg, var(--color-a), var(--color-b));
             border: 2px white solid; font-size: 24px; color: rgba(255,255,255,0.7);
@@ -72,15 +73,15 @@
         .card-front {
             background: #fff; color: #222;
             transform: rotateY(180deg); font-size: 32px;
-            overflow: hidden; /* 防止內容溢出 */
+            overflow: hidden; 
         }
 
-        /* 💡 如果之後用圖片，確保圖片大小死死固定在 75x75 內且不變形 */
+        /* 確保卡牌圖片大小固定在 75x75 內且不變形 */
         .card-front img {
             width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
         }
 
-        /* 底部設定區（可以讓使用者自己輸入想玩的 Emoji） */
+        /* 底部設定區 */
         #settings-bar {
             background: rgba(0,0,0,0.4); padding: 15px 20px calc(var(--safe-bottom) + 15px) 20px;
             display: flex; flex-direction: column; gap: 8px; align-items: center;
@@ -93,6 +94,25 @@
             padding: 8px 16px; border: none; background: #4caf50; color: white;
             border-radius: 8px; font-weight: bold; cursor: pointer;
         }
+
+        /* 專屬通知彈窗系統 CSS */
+        #customModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.4); z-index: 9999; justify-content: center; align-items: center;
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        }
+        .modal-content {
+            background: white; width: 85%; max-width: 320px; border-radius: 28px; 
+            overflow: hidden; animation: popIn 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+        .modal-header { padding: 18px; text-align: center; color: white; font-weight: bold; background: var(--modal-theme); font-size: 17px; }
+        .modal-body { padding: 25px 20px; text-align: center; color: #444; font-size: 15px; line-height: 1.5; }
+        .modal-footer { display: flex; border-top: 1px solid #eee; }
+        .modal-btn { flex: 1; padding: 16px; border: none; background: white; color: var(--modal-theme); font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+        .modal-btn:active { background: #f9f9f9; }
+
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -114,18 +134,31 @@
     </div>
 </div>
 
+<div id="customModal">
+    <div class="modal-content">
+        <div id="modalHeader" class="modal-header">標題</div>
+        <div id="modalBody" class="modal-body">內容文字</div>
+        <div class="modal-footer" id="modalFooter"></div>
+    </div>
+</div>
+
 <script>
-    // 讀取虛擬手機的系統主題背景
     function applyTheme() {
         const sysColorA = localStorage.getItem('theme_color_a') || '#4285f4';
         const sysColorB = localStorage.getItem('theme_color_b') || '#1a2a6c';
+
         const bgColorA = localStorage.getItem('bg_color_a') || sysColorA;
         const bgColorB = localStorage.getItem('bg_color_b') || sysColorB;
+        const modalColor = localStorage.getItem('theme_modal_color') || sysColorA; 
         let wallpaper = localStorage.getItem('active_wallpaper');
         const bgStyle = localStorage.getItem('bg_style') || 'gradient';
 
-        document.documentElement.style.setProperty('--color-a', sysColorA);
-        document.documentElement.style.setProperty('--color-b', sysColorB);
+        const gameColorA = localStorage.getItem('app_game_color_a') || sysColorA;
+        const gameColorB = localStorage.getItem('theme_color_b') || sysColorB; 
+
+        document.documentElement.style.setProperty('--color-a', gameColorA);
+        document.documentElement.style.setProperty('--color-b', gameColorB);
+        document.documentElement.style.setProperty('--modal-theme', modalColor); 
 
         if (wallpaper && wallpaper.trim() !== "" && bgStyle !== 'gradient') {
             if (!wallpaper.startsWith('url(')) wallpaper = `url(${wallpaper})`;
@@ -135,6 +168,24 @@
             document.body.style.background = "";
             document.body.style.backgroundImage = `linear-gradient(180deg, ${bgColorA}, ${bgColorB})`;
         }
+    }
+
+    function showModal(title, msg, onConfirm = null) {
+        const modal = document.getElementById('customModal');
+        document.getElementById('modalHeader').innerText = title;
+        document.getElementById('modalBody').innerText = msg;
+        const footer = document.getElementById('modalFooter');
+        
+        footer.innerHTML = `<button class="modal-btn" id="modalOkBtn">確定</button>`;
+        document.getElementById('modalOkBtn').onclick = () => {
+            closeModal();
+            if (onConfirm) onConfirm();
+        };
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').style.display = 'none';
     }
 
     let cardsData = [];
@@ -153,29 +204,22 @@
         document.getElementById('moves').innerText = moves;
         document.getElementById('matches').innerText = matches;
 
-        // 💡 取得使用者輸入的自訂內容
         const inputVal = document.getElementById('emoji-input').value.trim();
-        // 將字串轉成陣列（支援 Emoji）
         let baseItems = Array.from(inputVal).slice(0, 8);
-        
-        // 防呆：如果使用者亂輸入導致不夠 8 個，用預設湊滿
+
         while(baseItems.length < 8) {
             baseItems.push('❓');
         }
 
-        // 對對碰需要兩兩一組
         cardsData = [...baseItems, ...baseItems];
-        // 洗牌算法 (Shuffle)
         cardsData.sort(() => Math.random() - 0.5);
 
-        // 渲染卡牌 HTML
         cardsData.forEach((item, index) => {
             const card = document.createElement('div');
             card.className = 'card';
             card.dataset.index = index;
             card.dataset.value = item;
 
-            // 💡 判斷使用者輸入的是不是網址（圖片路徑），如果是就渲染成 <img>，否則渲染成 Emoji 文字
             let frontContent = item;
             if (item.startsWith('http') || item.startsWith('./') || item.startsWith('data:image')) {
                 frontContent = `<img src="${item}">`;
@@ -183,9 +227,9 @@
 
             card.innerHTML = `
                 <div class="card-face card-back">❓</div>
-                <div class="card-face card-front">${frontContent}</div>
+                <div class="card-front">${frontContent}</div>
             `;
-            
+
             card.addEventListener('click', flipCard);
             grid.appendChild(card);
         });
@@ -193,8 +237,8 @@
 
     function flipCard() {
         if (lockBoard) return;
-        if (this === flippedCards[0]) return; // 不能重複點同一張
-        if (this.classList.contains('flipped')) return; // 已經配對成功的不能再點
+        if (this === flippedCards[0]) return; 
+        if (this.classList.contains('flipped')) return; 
 
         this.classList.add('flipped');
         flippedCards.push(this);
@@ -213,11 +257,13 @@
             document.getElementById('matches').innerText = matches;
             flippedCards = [];
             if (matches === 8) {
-                setTimeout(() => { alert(`🎉 恭喜破關！你總共花了 ${moves} 步。`); }, 500);
+                setTimeout(() => { 
+                    // 💡 點選確定後只會純粹關閉視窗，不會自動洗牌重置囉！
+                    showModal("🎉 恭喜通關！", `太厲害了！你總共花了 ${moves} 步完成所有配對。`); 
+                }, 500);
             }
         } else {
             lockBoard = true;
-            // 沒對中，1秒後翻回去
             setTimeout(() => {
                 flippedCards[0].classList.remove('flipped');
                 flippedCards[1].classList.remove('flipped');

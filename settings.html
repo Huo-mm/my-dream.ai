@@ -97,6 +97,7 @@
         <div style="font-size:14px; font-weight:600;">桌面背景 A (上)</div>
         <div class="picker-wrapper" id="pw-bgColorA"><input type="color" id="bgColorA" oninput="saveLive('bg_color_a', this.value)"></div>
     </div>
+    <div class="card-title">🖼️ 桌面背景色</div>
     <div class="app-row">
         <div style="font-size:14px; font-weight:600;">桌面背景 B (下)</div>
         <div class="picker-wrapper" id="pw-bgColorB"><input type="color" id="bgColorB" oninput="saveLive('bg_color_b', this.value)"></div>
@@ -128,6 +129,7 @@
     const apps = [
         { id: 'AI', name: 'MINE', icon: '💬', key: 'app_ai_color_a', def: '#4285f4' },
         { id: 'Clock', name: '時鐘', icon: '⏰', key: 'app_clock_color_a', def: '#ff9500' },
+        { id: 'Game', name: '對對碰', icon: '🎮', key: 'app_game_color_a', def: '#9c27b0' }, /* ✨ 這裡成功把對對碰塞進去連動清單囉！ */
         { id: 'Gallery', name: '相簿', icon: '🖼️', key: 'app_gallery_color_a', def: '#4cd964' },
         { id: 'Notes', name: '備忘錄', icon: '📝', key: 'app_notes_color_a', def: '#ffcc00' },
         { id: 'Weather', name: '天氣', icon: '☁️', key: 'app_weather_color_a', def: '#5ac8fa' },
@@ -173,7 +175,7 @@
         apps.forEach(app => {
             const input = document.getElementById('color' + app.id);
             const icon = document.getElementById('icon' + app.id);
-            
+
             if (input && icon) {
                 let displayColor = '';
                 if (app.isPet) {
@@ -182,10 +184,10 @@
                 } else {
                     displayColor = localStorage.getItem(app.key) || globalMainColor;
                 }
-                
+
                 input.value = displayColor;
                 icon.style.background = displayColor;
-                
+
                 const wrapper = document.getElementById('pw-color' + app.id);
                 if (wrapper) wrapper.style.backgroundColor = displayColor;
             }
@@ -263,7 +265,7 @@
 
             document.getElementById('colorModal').value = mainColor;
             document.getElementById('bgColorA').value = mainColor;
-            
+
             updatePickersAndIcons();
             refreshUI();
         });
@@ -285,8 +287,6 @@
     window.onload = () => {
         initAppList();
 
-        // 💡 核心修正：自動同步偵測邏輯
-        // 如果 localStorage 有設定桌布圖片，但狀態卻沒同步更新成 'wallpaper'，在此進行自動修正
         const hasWallpaper = localStorage.getItem('active_wallpaper');
         if (hasWallpaper) {
             localStorage.setItem('bg_style', 'wallpaper');

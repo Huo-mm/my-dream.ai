@@ -13,6 +13,7 @@
             --color-a: #4285f4;
             --color-b: #1a2a6c;
             --modal-theme: #007aff; 
+            --btn-theme: #4caf50; /* ✨ 新增：重新開始按鈕的主題色變數 */
         }
         html, body { margin: 0; padding: 0; height: 100%; width: 100%; }
         body {
@@ -91,9 +92,10 @@
             flex: 1; padding: 8px; border-radius: 8px; border: none; font-size: 14px; text-align: center;
         }
         #restart-btn {
-            padding: 8px 16px; border: none; background: #4caf50; color: white;
-            border-radius: 8px; font-weight: bold; cursor: pointer;
+            padding: 8px 16px; border: none; background: var(--btn-theme); color: white; /* ✨ 連動遊戲獨立選色 */
+            border-radius: 8px; font-weight: bold; cursor: pointer; transition: opacity 0.2s;
         }
+        #restart-btn:active { opacity: 0.8; }
 
         /* 專屬通知彈窗系統 CSS */
         #customModal {
@@ -130,7 +132,7 @@
     <span style="font-size: 12px; color: #ccc;">💡 自訂遊戲圖案（請輸入 8 個不同的 Emoji 或字元）</span>
     <div class="input-row">
         <input type="text" id="emoji-input" value="🐾🐱🦊🦁🐯🐼🐰🦄">
-        <button id="restart-btn" onclick="initGame()">重新開始</button>
+        <button id="restart-btn" onclick="handleRestartClick()">重新開始</button>
     </div>
 </div>
 
@@ -149,16 +151,21 @@
 
         const bgColorA = localStorage.getItem('bg_color_a') || sysColorA;
         const bgColorB = localStorage.getItem('bg_color_b') || sysColorB;
+        
+        // 💡 抓取自定義系統設定頁面的「通知彈窗主題色」
         const modalColor = localStorage.getItem('theme_modal_color') || sysColorA; 
         let wallpaper = localStorage.getItem('active_wallpaper');
         const bgStyle = localStorage.getItem('bg_style') || 'gradient';
 
+        // 💡 抓取自定義對對碰小遊戲的「獨立選色」
         const gameColorA = localStorage.getItem('app_game_color_a') || sysColorA;
         const gameColorB = localStorage.getItem('theme_color_b') || sysColorB; 
 
+        // 💡 將對應變數塞進 CSS 中
         document.documentElement.style.setProperty('--color-a', gameColorA);
         document.documentElement.style.setProperty('--color-b', gameColorB);
         document.documentElement.style.setProperty('--modal-theme', modalColor); 
+        document.documentElement.style.setProperty('--btn-theme', gameColorA); // ✨ 重新開始按鈕跟隨遊戲獨立選色！
 
         if (wallpaper && wallpaper.trim() !== "" && bgStyle !== 'gradient') {
             if (!wallpaper.startsWith('url(')) wallpaper = `url(${wallpaper})`;
@@ -235,6 +242,13 @@
         });
     }
 
+    // ✨ 新增：點擊重新開始按鈕時的處理邏輯
+    function handleRestartClick() {
+        initGame(); // 1. 先執行重置洗牌
+        // 2. 顯示精美的主題配對通知彈窗！
+        showModal("🔄 系統提示", "遊戲卡牌已重新打亂，新的回合開始囉！");
+    }
+
     function flipCard() {
         if (lockBoard) return;
         if (this === flippedCards[0]) return; 
@@ -258,7 +272,6 @@
             flippedCards = [];
             if (matches === 8) {
                 setTimeout(() => { 
-                    // 💡 點選確定後只會純粹關閉視窗，不會自動洗牌重置囉！
                     showModal("🎉 恭喜通關！", `太厲害了！你總共花了 ${moves} 步完成所有配對。`); 
                 }, 500);
             }

@@ -7,13 +7,16 @@
     <style>
         :root { --primary: #007aff; --bg: #f4f4f9; --modal-theme: #007aff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         body {
             margin: 0; background: var(--bg); font-family: -apple-system, sans-serif;
             padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 30px);
             color: #333;
+            /* ✨ 已移除原本誤加在此處、導致 input 被瀏覽器鎖定無法點擊的 user-select 禁止屬性 */
         }
+        
         .header { display: flex; align-items: center; margin-bottom: 25px; }
-        .back-btn { text-decoration: none; font-size: 24px; margin-right: 15px; color: #333; }
+        .back-btn { text-decoration: none; font-size: 20px; margin-right: 15px; color: #333; font-weight: bold; }
 
         .card { background: white; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
         .card-title { font-size: 17px; font-weight: bold; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; color: #000; }
@@ -33,8 +36,11 @@
             background: #eee;
             overflow: hidden;
         }
+        
+        /* 確保隱藏的 color input 能夠正確接收點擊事件 */
         input[type="color"] {
             position: absolute; top: -10px; left: -10px; width: 64px; height: 64px; border: none; cursor: pointer; opacity: 0;
+            z-index: 5;
         }
 
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
@@ -66,8 +72,7 @@
 <body>
 
 <div class="header">
-    <a href="index.html" class="back-btn">❮</a>
-    <h1 style="font-size: 22px; margin: 0;">我的主題</h1>
+    <a href="index.html" class="back-btn">🎦</a> <h1 style="font-size: 22px; margin: 0;">我的主題</h1>
 </div>
 
 <div class="card">
@@ -97,7 +102,6 @@
         <div style="font-size:14px; font-weight:600;">桌面背景 A (上)</div>
         <div class="picker-wrapper" id="pw-bgColorA"><input type="color" id="bgColorA" oninput="saveLive('bg_color_a', this.value)"></div>
     </div>
-    <div class="card-title">🖼️ 桌面背景色</div>
     <div class="app-row">
         <div style="font-size:14px; font-weight:600;">桌面背景 B (下)</div>
         <div class="picker-wrapper" id="pw-bgColorB"><input type="color" id="bgColorB" oninput="saveLive('bg_color_b', this.value)"></div>
@@ -129,7 +133,7 @@
     const apps = [
         { id: 'AI', name: 'MINE', icon: '💬', key: 'app_ai_color_a', def: '#4285f4' },
         { id: 'Clock', name: '時鐘', icon: '⏰', key: 'app_clock_color_a', def: '#ff9500' },
-        { id: 'Game', name: '對對碰', icon: '🎮', key: 'app_game_color_a', def: '#9c27b0' }, /* ✨ 這裡成功把對對碰塞進去連動清單囉！ */
+        { id: 'Game', name: '對對碰', icon: '🎮', key: 'app_game_color_a', def: '#9c27b0' },
         { id: 'Gallery', name: '相簿', icon: '🖼️', key: 'app_gallery_color_a', def: '#4cd964' },
         { id: 'Notes', name: '備忘錄', icon: '📝', key: 'app_notes_color_a', def: '#ffcc00' },
         { id: 'Weather', name: '天氣', icon: '☁️', key: 'app_weather_color_a', def: '#5ac8fa' },
@@ -260,7 +264,7 @@
 
             localStorage.setItem('theme_modal_color', mainColor);
             localStorage.setItem('bg_color_a', mainColor);
-            localStorage.setItem('bg_style', 'gradient'); // 同步時切回漸層
+            localStorage.setItem('bg_style', 'gradient');
             localStorage.setItem('pet_sync_trigger', Date.now());
 
             document.getElementById('colorModal').value = mainColor;

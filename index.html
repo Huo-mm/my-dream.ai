@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <title>C²s PHONE</title>
-    
+
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💙</text></svg>">
 
     <style>
@@ -62,6 +62,7 @@
         }
         .source-hidden { opacity: 0 !important; visibility: hidden; }
 
+        /* 所有 App 的圖示背景：一律完美同步主題 App 所控制的系統主色變數 */
         .icon-box { 
             width: 55px; height: 55px; border-radius: 14px; 
             display: flex; justify-content: center; align-items: center; 
@@ -146,6 +147,7 @@
         let wallpaper = localStorage.getItem('active_wallpaper');
         const bgStyle = localStorage.getItem('bg_style') || 'gradient';
 
+        // 注入全系統統一變數
         document.documentElement.style.setProperty('--color-a', sysColorA);
         document.documentElement.style.setProperty('--color-b', sysColorB);
 
@@ -169,7 +171,7 @@
         return [
             { id: 'chat', name: 'MINE', icon: '💬', url: 'chat.html' },
             { id: 'clock', name: '時間', icon: '⏰', url: 'clock.html' },
-            { id: 'game', name: '對對碰', icon: '🎮', url: 'game.html' }, /* ✨ 這裡加入了新遊戲 App！ */
+            { id: 'game', name: '對對碰', icon: '🎮', url: 'game.html' },
             { id: 'weather', name: '天氣', icon: '☁️', url: 'weather.html' },
             { id: 'gallery', name: '相簿', icon: '🖼️', url: 'gallery.html' },
             { id: 'notes', name: '備忘錄', icon: '📝', url: 'notes.html' },
@@ -443,12 +445,9 @@
         applyTheme();
         const savedLayout = localStorage.getItem('desktop_layout_ordered');
         const defaultApps = getAppData();
-        
+
         if (savedLayout) {
             let parsedLayout = JSON.parse(savedLayout);
-            
-            // 💡 智慧同步邏輯：如果主畫面有新增 App (例如 game)，但 localStorage 還是舊清單時
-            // 會自動把沒出現的新 App 自動加到後面，防止使用者看不到新功能！
             defaultApps.forEach(defaultApp => {
                 if (!parsedLayout.some(app => app.id === defaultApp.id)) {
                     parsedLayout.push(defaultApp);

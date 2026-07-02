@@ -339,7 +339,6 @@
             return false;
         });
 
-        // 這裡將 passive 改為 false，確保移動時能夠流暢阻斷頁面原生滾動
         el.addEventListener('touchstart', (e) => {
             clearTimeout(dragTimeout); 
             const touch = e.touches[0];
@@ -453,4 +452,23 @@
     function loadAndInitLayout() {
         applyTheme();
         const savedLayout = localStorage.getItem('desktop_layout_ordered');
-        const
+        if (savedLayout) {
+            try {
+                appData = JSON.parse(savedLayout);
+            } catch (e) {
+                appData = getAppData();
+            }
+        } else {
+            appData = getAppData();
+        }
+        initDesktop();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        loadAndInitLayout();
+        updateTime();
+        setInterval(updateTime, 1000);
+    });
+</script>
+</body>
+</html>

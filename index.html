@@ -111,8 +111,17 @@
         #dock { 
             background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
             margin: 0 20px calc(var(--safe-bottom) + 15px) 20px; padding: 12px; border-radius: 30px; 
-            display: flex; justify-content: space-around; flex-shrink: 0; 
+            display: flex; justify-content: space-around; align-items: center; /* 讓 Dock 內部元素垂直置中 */
+            flex-shrink: 0; 
             z-index: 10;
+        }
+
+        /* 讓 Dock 裡的圓角背景框大小適中，並繼承主題變色 */
+        #dock .icon-box {
+            margin-bottom: 0; 
+            width: 50px;      
+            height: 50px;
+            font-size: 24px;
         }
     </style>
 </head>
@@ -126,11 +135,11 @@
 <div id="home-screen"></div>
 
 <div id="dock">
-    <a href="chat.html" style="text-decoration:none; font-size:26px;">💬</a>
-    <a href="notes.html" style="text-decoration:none; font-size:26px;">📝</a>
-    <a href="gallery.html" style="text-decoration:none; font-size:26px;">🖼️</a>
-    <a href="clock.html" style="text-decoration:none; font-size:26px;">⏰</a>
-    <div onclick="location.reload()" style="cursor:pointer; font-size:26px;">🏠</div>
+    <a href="chat.html" style="text-decoration:none;"><div class="icon-box">💬</div></a>
+    <a href="notes.html" style="text-decoration:none;"><div class="icon-box">📝</div></a>
+    <a href="gallery.html" style="text-decoration:none;"><div class="icon-box">🖼️</div></a>
+    <a href="clock.html" style="text-decoration:none;"><div class="icon-box">⏰</div></a>
+    <div onclick="location.reload()" style="cursor:pointer;"><div class="icon-box">🏠</div></div>
 </div>
 
 <div id="desktop_pet_widget" class="pet-widget"></div>
@@ -330,7 +339,7 @@
             return false;
         });
 
-        // 這裡將 passive 改為 false，允許阻斷預設手機滑動事件
+        // 這裡將 passive 改為 false，確保移動時能夠流暢阻斷頁面原生滾動
         el.addEventListener('touchstart', (e) => {
             clearTimeout(dragTimeout); 
             const touch = e.touches[0];
@@ -444,27 +453,4 @@
     function loadAndInitLayout() {
         applyTheme();
         const savedLayout = localStorage.getItem('desktop_layout_ordered');
-        const defaultApps = getAppData();
-
-        if (savedLayout) {
-            let parsedLayout = JSON.parse(savedLayout);
-            defaultApps.forEach(defaultApp => {
-                if (!parsedLayout.some(app => app.id === defaultApp.id)) {
-                    parsedLayout.push(defaultApp);
-                }
-            });
-            appData = parsedLayout;
-        } else {
-            appData = defaultApps;
-        }
-        initDesktop();
-    }
-
-    window.onload = () => { 
-        loadAndInitLayout(); 
-        updateTime(); 
-        setInterval(updateTime, 1000); 
-    };
-</script>
-</body>
-</html>
+        const

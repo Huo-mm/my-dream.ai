@@ -452,14 +452,37 @@
     function loadAndInitLayout() {
         applyTheme();
         const savedLayout = localStorage.getItem('desktop_layout_ordered');
+        const defaultApps = getAppData();
+
         if (savedLayout) {
             try {
-                appData = JSON.parse(savedLayout);
+                const parsedLayout = JSON.parse(savedLayout);
+                
+                // 🔄 核心修正：自動將 getAppData() 裡最新設定的 icon / name 強制蓋掉舊紀錄
+                appData = parsedLayout.map(savedApp => {
+                    const latestAppConfig = defaultApps.find(d => d.id === savedApp.id);
+                    if (latestAppConfig) {
+                        return {
+                            ...savedApp,
+                            icon: latestAppConfig.icon, // 強制覆蓋為最新的 '✨'
+                            name: latestAppConfig.name  // 強制覆蓋最新名稱
+                        };
+                    }
+                    return savedApp;
+                });
+
+                // 如果未來 getAppData() 有新增其他全新的 App，也順便補進來
+                defaultApps.forEach(defaultApp => {
+                    if (!appData.some(a => a.id === defaultApp.id)) {
+                        appData.push(defaultApp);
+                    }
+                });
+
             } catch (e) {
-                appData = getAppData();
+                appData = defaultApps;
             }
         } else {
-            appData = getAppData();
+            appData = defaultApps;
         }
         initDesktop();
     }
